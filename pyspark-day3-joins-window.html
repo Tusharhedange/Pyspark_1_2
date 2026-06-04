@@ -1,0 +1,1382 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PySpark Day 3 — Joins & Window Functions</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Outfit:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #06080f;
+    --card: #0d1117;
+    --card2: #111827;
+    --border: #1f2937;
+    --border2: #374151;
+    --orange: #f97316;
+    --orange2: #fb923c;
+    --yellow: #eab308;
+    --green: #22c55e;
+    --purple: #a855f7;
+    --blue: #38bdf8;
+    --red: #f43f5e;
+    --text: #f1f5f9;
+    --muted: #6b7280;
+    --muted2: #9ca3af;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { background:var(--bg); color:var(--text); font-family:'Outfit',sans-serif; min-height:100vh; overflow-x:hidden; }
+  body::before { content:''; position:fixed; inset:0; background-image:radial-gradient(circle at 20% 20%,rgba(249,115,22,.04) 0%,transparent 50%),radial-gradient(circle at 80% 80%,rgba(168,85,247,.04) 0%,transparent 50%); pointer-events:none; z-index:0; }
+
+  .hero { position:relative; z-index:1; padding:64px 40px 48px; text-align:center; border-bottom:1px solid var(--border); }
+  .hero::after { content:''; position:absolute; bottom:0; left:50%; transform:translateX(-50%); width:600px; height:1px; background:linear-gradient(90deg,transparent,var(--orange),var(--purple),transparent); }
+  .badge { display:inline-flex; align-items:center; gap:6px; background:rgba(249,115,22,.1); border:1px solid rgba(249,115,22,.3); color:var(--orange); font-family:'JetBrains Mono',monospace; font-size:11px; padding:5px 14px; border-radius:20px; letter-spacing:1.5px; text-transform:uppercase; margin-bottom:24px; }
+  .hero h1 { font-size:clamp(2rem,5vw,3.8rem); font-weight:900; line-height:1.1; margin-bottom:14px; letter-spacing:-1px; }
+  .hero h1 em { font-style:normal; color:var(--orange); }
+  .hero p { color:var(--muted2); font-size:16px; max-width:580px; margin:0 auto 36px; line-height:1.6; }
+  .hero-stats { display:flex; justify-content:center; gap:48px; flex-wrap:wrap; }
+  .stat { text-align:center; }
+  .stat-n { font-family:'JetBrains Mono',monospace; font-size:32px; font-weight:700; color:var(--orange); display:block; }
+  .stat-l { font-size:12px; color:var(--muted); text-transform:uppercase; letter-spacing:1px; }
+
+  .sticky-nav { position:sticky; top:0; z-index:100; background:rgba(6,8,15,.95); backdrop-filter:blur(12px); border-bottom:1px solid var(--border); padding:0 40px; display:flex; gap:0; overflow-x:auto; }
+  .sticky-nav::-webkit-scrollbar { height:2px; }
+  .sticky-nav::-webkit-scrollbar-thumb { background:var(--orange); }
+  .nav-tab { flex-shrink:0; background:none; border:none; border-bottom:3px solid transparent; color:var(--muted); font-family:'Outfit',sans-serif; font-size:13px; font-weight:600; padding:16px 20px; cursor:pointer; transition:all .2s; white-space:nowrap; }
+  .nav-tab:hover { color:var(--text); }
+  .nav-tab.active { color:var(--orange); border-bottom-color:var(--orange); }
+
+  .container { max-width:1440px; margin:0 auto; padding:48px 40px; position:relative; z-index:1; }
+  .day-panel { display:none; animation:fadeUp .3s ease; }
+  .day-panel.active { display:block; }
+  @keyframes fadeUp { from{opacity:0;transform:translateY(16px)} to{opacity:1;transform:translateY(0)} }
+
+  .day-hero { display:grid; grid-template-columns:auto 1fr; gap:28px; align-items:start; background:var(--card); border:1px solid var(--border); border-radius:20px; padding:32px 36px; margin-bottom:40px; position:relative; overflow:hidden; }
+  .day-hero::before { content:''; position:absolute; top:0; left:0; width:100%; height:3px; background:linear-gradient(90deg,var(--orange),var(--purple)); }
+  .day-big { font-family:'JetBrains Mono',monospace; font-size:72px; font-weight:700; color:var(--orange); opacity:.15; line-height:1; user-select:none; }
+  .day-meta h2 { font-size:26px; font-weight:800; margin-bottom:10px; letter-spacing:-.5px; }
+  .day-meta p { color:var(--muted2); line-height:1.7; font-size:15px; }
+  .pill-row { display:flex; flex-wrap:wrap; gap:8px; margin-top:16px; }
+  .pill { font-family:'JetBrains Mono',monospace; font-size:11px; padding:4px 12px; border-radius:20px; border:1px solid rgba(249,115,22,.25); background:rgba(249,115,22,.08); color:var(--orange2); }
+
+  .sec-label { display:flex; align-items:center; gap:12px; font-size:13px; font-weight:700; text-transform:uppercase; letter-spacing:2px; color:var(--yellow); margin-bottom:20px; }
+  .sec-label::after { content:''; flex:1; height:1px; background:var(--border); }
+
+  .tables-wrap { display:grid; grid-template-columns:repeat(auto-fill,minmax(300px,1fr)); gap:16px; margin-bottom:48px; }
+  .tcard { background:var(--card); border:1px solid var(--border); border-radius:12px; overflow:hidden; }
+  .tcard-head { background:rgba(249,115,22,.07); border-bottom:1px solid var(--border); padding:10px 16px; font-family:'JetBrains Mono',monospace; font-size:12px; color:var(--orange2); }
+  .tcard table { width:100%; border-collapse:collapse; }
+  .tcard thead th { background:rgba(255,255,255,.02); padding:7px 12px; font-family:'JetBrains Mono',monospace; font-size:10px; color:var(--muted); text-transform:uppercase; text-align:left; border-bottom:1px solid var(--border); }
+  .tcard tbody td { padding:6px 12px; font-size:12px; border-bottom:1px solid rgba(31,41,55,.5); color:var(--text); font-family:'JetBrains Mono',monospace; }
+  .tcard tbody tr:last-child td { border-bottom:none; }
+  .tcard tbody tr:hover { background:rgba(255,255,255,.02); }
+
+  .code-block { background:var(--card); border:1px solid var(--border); border-radius:12px; overflow:hidden; margin-bottom:32px; }
+  .code-block-head { background:rgba(56,189,248,.07); border-bottom:1px solid var(--border); padding:10px 16px; font-family:'JetBrains Mono',monospace; font-size:11px; color:var(--blue); }
+  .code-block pre { padding:20px; font-family:'JetBrains Mono',monospace; font-size:12px; line-height:1.8; overflow-x:auto; color:#e2e8f0; }
+  .kw{color:#c084fc;font-weight:600} .fn{color:#fb923c} .st{color:#4ade80} .cm{color:#4b5563;font-style:italic} .nu{color:#38bdf8} .cl{color:#fbbf24}
+
+  .concept-box { background:var(--card2); border:1px solid var(--border2); border-left:3px solid var(--orange); border-radius:10px; padding:20px 24px; margin-bottom:32px; }
+  .concept-box h4 { font-size:14px; font-weight:700; color:var(--orange); margin-bottom:12px; font-family:'JetBrains Mono',monospace; text-transform:uppercase; letter-spacing:1px; }
+  .concept-box ul { list-style:none; }
+  .concept-box ul li { font-size:13px; color:var(--muted2); padding:4px 0 4px 16px; position:relative; line-height:1.6; }
+  .concept-box ul li::before { content:'▸'; position:absolute; left:0; color:var(--orange); }
+
+  .q-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(460px,1fr)); gap:20px; margin-bottom:48px; }
+  .qblock { background:var(--card); border:1px solid var(--border); border-radius:14px; overflow:hidden; }
+  .qblock-head { padding:13px 18px; display:flex; align-items:center; gap:10px; border-bottom:1px solid var(--border); }
+  .qblock.easy   .qblock-head { background:rgba(34,197,94,.06); }
+  .qblock.medium .qblock-head { background:rgba(234,179,8,.06); }
+  .qblock.hard   .qblock-head { background:rgba(244,63,94,.06); }
+  .qblock.interview .qblock-head { background:rgba(168,85,247,.06); }
+  .lvl { font-family:'JetBrains Mono',monospace; font-size:10px; font-weight:700; padding:3px 10px; border-radius:4px; letter-spacing:1.5px; }
+  .easy   .lvl { background:rgba(34,197,94,.15);   color:var(--green); }
+  .medium .lvl { background:rgba(234,179,8,.15);   color:var(--yellow); }
+  .hard   .lvl { background:rgba(244,63,94,.15);   color:var(--red); }
+  .interview .lvl { background:rgba(168,85,247,.15); color:var(--purple); }
+  .qcount { font-size:12px; color:var(--muted); font-family:'JetBrains Mono',monospace; }
+
+  .qlist { padding:4px 0; }
+  .qi { display:flex; gap:12px; padding:10px 18px; border-bottom:1px solid rgba(31,41,55,.6); cursor:pointer; transition:background .15s; }
+  .qi:last-child { border-bottom:none; }
+  .qi:hover { background:rgba(255,255,255,.02); }
+  .qn { font-family:'JetBrains Mono',monospace; font-size:10px; color:var(--muted); flex-shrink:0; margin-top:3px; }
+  .qt { font-size:13px; line-height:1.55; color:var(--text); flex:1; }
+  .qarrow { color:var(--muted); font-size:11px; flex-shrink:0; margin-top:3px; transition:transform .2s; }
+  .qi.open .qarrow { transform:rotate(90deg); color:var(--orange); }
+  .qa { display:none; margin-top:8px; }
+  .qi.open .qa { display:block; }
+  .qa-inner { background:#0a0d14; border:1px solid var(--border2); border-radius:8px; overflow:hidden; }
+  .qa-head { background:rgba(249,115,22,.06); padding:6px 14px; font-family:'JetBrains Mono',monospace; font-size:10px; color:var(--orange); border-bottom:1px solid var(--border); }
+  .qa-inner pre { padding:14px; font-family:'JetBrains Mono',monospace; font-size:11px; line-height:1.8; color:#cbd5e1; white-space:pre-wrap; overflow-x:auto; }
+
+  footer { text-align:center; padding:40px; border-top:1px solid var(--border); color:var(--muted); font-family:'JetBrains Mono',monospace; font-size:12px; position:relative; z-index:1; }
+
+  @media(max-width:768px) {
+    .hero{padding:40px 20px 32px} .container{padding:28px 16px} .sticky-nav{padding:0 16px}
+    .q-grid{grid-template-columns:1fr} .tables-wrap{grid-template-columns:1fr}
+    .day-hero{grid-template-columns:1fr} .day-big{display:none}
+  }
+</style>
+</head>
+<body>
+
+<div class="hero">
+  <div class="badge">⚡ PySpark Day 3</div>
+  <h1>Joins &amp; <em>Window Functions</em></h1>
+  <p>PySpark ka sabse important topic — multiple DataFrames join karna aur window-level analytics. Har Data Engineer interview mein ye zaroor aata hai.</p>
+  <div class="hero-stats">
+    <div class="stat"><span class="stat-n">2</span><span class="stat-l">Topics</span></div>
+    <div class="stat"><span class="stat-n">40</span><span class="stat-l">Questions</span></div>
+    <div class="stat"><span class="stat-n">4</span><span class="stat-l">Levels</span></div>
+    <div class="stat"><span class="stat-n">100%</span><span class="stat-l">Practical</span></div>
+  </div>
+</div>
+
+<nav class="sticky-nav">
+  <button class="nav-tab active" onclick="showDay('joins',this)">Part 1 — Joins (inner, left, right, semi, anti, cross)</button>
+  <button class="nav-tab" onclick="showDay('window',this)">Part 2 — Window Functions (rank, lag, lead, running total)</button>
+</nav>
+
+<div class="container">
+
+<!-- ══════════════════ PART 1: JOINS ══════════════════ -->
+<div class="day-panel active" id="joins">
+
+  <div class="day-hero">
+    <div class="day-big">3A</div>
+    <div class="day-meta">
+      <h2>Joins — inner, left, right, full, semi, anti, cross, broadcast</h2>
+      <p>Multiple DataFrames ko combine karna. PySpark mein join SQL se thoda alag hota hai — syntax, null handling, aur performance sab samajhna zaroori hai.</p>
+      <div class="pill-row">
+        <span class="pill">inner join</span>
+        <span class="pill">left join</span>
+        <span class="pill">right join</span>
+        <span class="pill">full outer</span>
+        <span class="pill">left semi</span>
+        <span class="pill">left anti</span>
+        <span class="pill">cross join</span>
+        <span class="pill">broadcast join</span>
+        <span class="pill">self join</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="concept-box">
+    <h4>Key Concepts — Joins</h4>
+    <ul>
+      <li><strong>inner</strong> — Only matching rows from both sides. Default join type.</li>
+      <li><strong>left / left_outer</strong> — All rows from left + matching from right. NULL if no match.</li>
+      <li><strong>right / right_outer</strong> — All rows from right + matching from left.</li>
+      <li><strong>full / full_outer</strong> — All rows from both sides. NULL where no match.</li>
+      <li><strong>left_semi</strong> — Only left rows WHERE match exists. Like SQL EXISTS. No right columns returned.</li>
+      <li><strong>left_anti</strong> — Only left rows WHERE NO match exists. Like SQL NOT EXISTS.</li>
+      <li><strong>cross</strong> — Cartesian product. Every row × every row. Use carefully!</li>
+      <li><strong>broadcast()</strong> — Send small DF to all executors. Avoids shuffle. Use when one DF &lt; 10MB.</li>
+      <li><strong>NULL in join</strong> — NULL != NULL, so NULL keys never match in joins.</li>
+    </ul>
+  </div>
+
+  <div class="sec-label">⚙️ Setup + Sample Data</div>
+  <div class="code-block">
+    <div class="code-block-head">🐍 DataFrames for Join Practice</div>
+    <pre><span class="kw">from</span> pyspark.sql <span class="kw">import</span> SparkSession, functions <span class="kw">as</span> F
+<span class="kw">from</span> pyspark.sql.functions <span class="kw">import</span> broadcast
+
+spark = SparkSession.builder.appName(<span class="st">"Day3Joins"</span>).getOrCreate()
+
+<span class="cm"># employees</span>
+emp_data = [
+    (<span class="nu">1</span>,  <span class="st">"Rahul"</span>, <span class="nu">10</span>, <span class="nu">85000.0</span>, <span class="kw">None</span>),
+    (<span class="nu">2</span>,  <span class="st">"Priya"</span>, <span class="nu">20</span>, <span class="nu">62000.0</span>, <span class="nu">1</span>),
+    (<span class="nu">3</span>,  <span class="st">"Amit"</span>,  <span class="nu">10</span>, <span class="nu">92000.0</span>, <span class="nu">1</span>),
+    (<span class="nu">4</span>,  <span class="st">"Sneha"</span>, <span class="nu">30</span>, <span class="nu">55000.0</span>, <span class="nu">7</span>),
+    (<span class="nu">5</span>,  <span class="st">"Karan"</span>, <span class="nu">20</span>, <span class="nu">71000.0</span>, <span class="nu">2</span>),
+    (<span class="nu">6</span>,  <span class="st">"Divya"</span>, <span class="nu">10</span>, <span class="nu">78000.0</span>, <span class="nu">3</span>),
+    (<span class="nu">7</span>,  <span class="st">"Raj"</span>,   <span class="nu">40</span>, <span class="nu">95000.0</span>, <span class="kw">None</span>),
+    (<span class="nu">8</span>,  <span class="st">"Meena"</span>, <span class="nu">30</span>, <span class="kw">None</span>,    <span class="nu">7</span>),
+    (<span class="nu">9</span>,  <span class="st">"Arjun"</span>, <span class="nu">40</span>, <span class="nu">88000.0</span>, <span class="nu">7</span>),
+    (<span class="nu">10</span>, <span class="st">"Pooja"</span>, <span class="nu">50</span>, <span class="nu">67000.0</span>, <span class="kw">None</span>),  <span class="cm"># dept_id=50 has no dept</span>
+]
+emp_df = spark.createDataFrame(emp_data,
+    [<span class="st">"emp_id"</span>, <span class="st">"name"</span>, <span class="st">"dept_id"</span>, <span class="st">"salary"</span>, <span class="st">"manager_id"</span>])
+
+<span class="cm"># departments</span>
+dept_data = [
+    (<span class="nu">10</span>, <span class="st">"Engineering"</span>, <span class="st">"Bangalore"</span>, <span class="nu">5000000</span>),
+    (<span class="nu">20</span>, <span class="st">"Marketing"</span>,   <span class="st">"Mumbai"</span>,    <span class="nu">2000000</span>),
+    (<span class="nu">30</span>, <span class="st">"HR"</span>,           <span class="st">"Pune"</span>,      <span class="nu">1000000</span>),
+    (<span class="nu">40</span>, <span class="st">"Finance"</span>,     <span class="st">"Delhi"</span>,     <span class="nu">3000000</span>),
+    (<span class="nu">60</span>, <span class="st">"Legal"</span>,       <span class="st">"Chennai"</span>,   <span class="nu">800000</span>),  <span class="cm"># no employees!</span>
+]
+dept_df = spark.createDataFrame(dept_data,
+    [<span class="st">"dept_id"</span>, <span class="st">"dept_name"</span>, <span class="st">"location"</span>, <span class="st">"budget"</span>])
+
+<span class="cm"># orders</span>
+orders_data = [
+    (<span class="nu">1001</span>, <span class="nu">1</span>, <span class="nu">101</span>, <span class="nu">2</span>, <span class="st">"2024-01-10"</span>),
+    (<span class="nu">1002</span>, <span class="nu">3</span>, <span class="nu">102</span>, <span class="nu">1</span>, <span class="st">"2024-01-15"</span>),
+    (<span class="nu">1003</span>, <span class="nu">2</span>, <span class="nu">105</span>, <span class="nu">5</span>, <span class="st">"2024-02-05"</span>),
+    (<span class="nu">1004</span>, <span class="nu">5</span>, <span class="nu">103</span>, <span class="nu">1</span>, <span class="st">"2024-02-20"</span>),
+    (<span class="nu">1005</span>, <span class="nu">1</span>, <span class="nu">108</span>, <span class="nu">1</span>, <span class="st">"2024-03-01"</span>),
+    (<span class="nu">1006</span>, <span class="nu">99</span>,<span class="nu">106</span>, <span class="nu">3</span>, <span class="st">"2024-03-10"</span>),  <span class="cm"># emp_id=99 doesn't exist</span>
+]
+orders_df = spark.createDataFrame(orders_data,
+    [<span class="st">"order_id"</span>, <span class="st">"emp_id"</span>, <span class="st">"prod_id"</span>, <span class="st">"qty"</span>, <span class="st">"order_date"</span>])</pre>
+  </div>
+
+  <div class="sec-label">📋 Reference Tables</div>
+  <div class="tables-wrap">
+    <div class="tcard">
+      <div class="tcard-head">🗄️ employees</div>
+      <table>
+        <thead><tr><th>emp_id</th><th>name</th><th>dept_id</th><th>salary</th><th>manager_id</th></tr></thead>
+        <tbody>
+          <tr><td>1</td><td>Rahul</td><td>10</td><td>85000</td><td>NULL</td></tr>
+          <tr><td>2</td><td>Priya</td><td>20</td><td>62000</td><td>1</td></tr>
+          <tr><td>3</td><td>Amit</td><td>10</td><td>92000</td><td>1</td></tr>
+          <tr><td>4</td><td>Sneha</td><td>30</td><td>55000</td><td>7</td></tr>
+          <tr><td>5</td><td>Karan</td><td>20</td><td>71000</td><td>2</td></tr>
+          <tr><td>6</td><td>Divya</td><td>10</td><td>78000</td><td>3</td></tr>
+          <tr><td>7</td><td>Raj</td><td>40</td><td>95000</td><td>NULL</td></tr>
+          <tr><td>8</td><td>Meena</td><td>30</td><td>NULL</td><td>7</td></tr>
+          <tr><td>9</td><td>Arjun</td><td>40</td><td>88000</td><td>7</td></tr>
+          <tr><td>10</td><td>Pooja</td><td>50</td><td>67000</td><td>NULL</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="tcard">
+      <div class="tcard-head">🗄️ departments</div>
+      <table>
+        <thead><tr><th>dept_id</th><th>dept_name</th><th>location</th><th>budget</th></tr></thead>
+        <tbody>
+          <tr><td>10</td><td>Engineering</td><td>Bangalore</td><td>5000000</td></tr>
+          <tr><td>20</td><td>Marketing</td><td>Mumbai</td><td>2000000</td></tr>
+          <tr><td>30</td><td>HR</td><td>Pune</td><td>1000000</td></tr>
+          <tr><td>40</td><td>Finance</td><td>Delhi</td><td>3000000</td></tr>
+          <tr><td>60</td><td>Legal</td><td>Chennai</td><td>800000</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="tcard">
+      <div class="tcard-head">🗄️ orders</div>
+      <table>
+        <thead><tr><th>order_id</th><th>emp_id</th><th>prod_id</th><th>qty</th><th>order_date</th></tr></thead>
+        <tbody>
+          <tr><td>1001</td><td>1</td><td>101</td><td>2</td><td>2024-01-10</td></tr>
+          <tr><td>1002</td><td>3</td><td>102</td><td>1</td><td>2024-01-15</td></tr>
+          <tr><td>1003</td><td>2</td><td>105</td><td>5</td><td>2024-02-05</td></tr>
+          <tr><td>1004</td><td>5</td><td>103</td><td>1</td><td>2024-02-20</td></tr>
+          <tr><td>1005</td><td>1</td><td>108</td><td>1</td><td>2024-03-01</td></tr>
+          <tr><td>1006</td><td>99</td><td>106</td><td>3</td><td>2024-03-10</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="sec-label">❓ Questions — All Levels</div>
+  <div class="q-grid">
+
+    <!-- EASY -->
+    <div class="qblock easy">
+      <div class="qblock-head"><span class="lvl">EASY</span><span class="qcount">10 Questions</span></div>
+      <div class="qlist">
+
+        <div class="qi" onclick="toggleQ(this)"><span class="qn">01</span><span class="qt">Inner join employees with departments on dept_id.</span><span class="qarrow">▶</span>
+        <div class="qa"><div class="qa-inner"><div class="qa-head">💡 Solution</div><pre><span class="cm"># Method 1: string column (no duplicate dept_id col)</span>
+result = emp_df.join(dept_df, on=<span class="st">"dept_id"</span>, how=<span class="st">"inner"</span>)
+result.show()
+
+<span class="cm"># Method 2: column expression</span>
+result = emp_df.join(dept_df,
+    emp_df[<span class="st">"dept_id"</span>] == dept_df[<span class="st">"dept_id"</span>], <span class="st">"inner"</span>)
+
+<span class="cm"># Default join type is inner, so "inner" can be omitted</span>
+result = emp_df.join(dept_df, on=<span class="st">"dept_id"</span>)
+result.show()
+<span class="cm"># Returns 9 rows — Pooja (dept_id=50) excluded</span></pre></div></div></div>
+
+        <div class="qi" onclick="toggleQ(this)"><span class="qn">02</span><span class="qt">Left join: Show all employees including those with no department.</span><span class="qarrow">▶</span>
+        <div class="qa"><div class="qa-inner"><div class="qa-head">💡 Solution</div><pre">result = emp_df.join(dept_df, on=<span class="st">"dept_id"</span>, how=<span class="st">"left"</span>)
+result.show()
+<span class="cm"># Returns 10 rows — Pooja has NULL dept_name, location, budget
+# "left" same as "left_outer"</span>
+
+result.select(<span class="st">"name"</span>, <span class="st">"dept_name"</span>, <span class="st">"location"</span>).show()</pre></div></div></div>
+
+        <div class="qi" onclick="toggleQ(this)"><span class="qn">03</span><span class="qt">Right join: Show all departments including those with no employees.</span><span class="qarrow">▶</span>
+        <div class="qa"><div class="qa-inner"><div class="qa-head">💡 Solution</div><pre">result = emp_df.join(dept_df, on=<span class="st">"dept_id"</span>, how=<span class="st">"right"</span>)
+result.show()
+<span class="cm"># Returns 10 rows — Legal dept has NULL emp columns
+# "right" same as "right_outer"</span>
+
+<span class="cm"># Find depts with no employees:</span>
+result.filter(F.col(<span class="st">"emp_id"</span>).isNull()) \
+      .select(<span class="st">"dept_name"</span>, <span class="st">"location"</span>).show()</pre></div></div></div>
+
+        <div class="qi" onclick="toggleQ(this)"><span class="qn">04</span><span class="qt">Full outer join: Show all employees AND all departments.</span><span class="qarrow">▶</span>
+        <div class="qa"><div class="qa-inner"><div class="qa-head">💡 Solution</div><pre">result = emp_df.join(dept_df, on=<span class="st">"dept_id"</span>, how=<span class="st">"full"</span>)
+result.show()
+<span class="cm"># "full" same as "outer" or "full_outer"
+# Returns: all employees + all departments
+# NULLs where no match on either side</span>
+
+result.orderBy(<span class="st">"dept_id"</span>).show()</pre></div></div></div>
+
+        <div class="qi" onclick="toggleQ(this)"><span class="qn">05</span><span class="qt">Left semi join: Get employees who have placed at least one order.</span><span class="qarrow">▶</span>
+        <div class="qa"><div class="qa-inner"><div class="qa-head">💡 Solution</div><pre"><span class="cm"># left_semi: returns only LEFT columns where match found
+# Like SQL: WHERE EXISTS (SELECT 1 FROM orders WHERE ...)</span>
+result = emp_df.join(orders_df, on=<span class="st">"emp_id"</span>, how=<span class="st">"left_semi"</span>)
+result.show()
+<span class="cm"># Only emp columns returned — no order columns!
+# Employees 1, 2, 3, 5 appear (have orders)</span></pre></div></div></div>
+
+        <div class="qi" onclick="toggleQ(this)"><span class="qn">06</span><span class="qt">Left anti join: Get employees who have NOT placed any order.</span><span class="qarrow">▶</span>
+        <div class="qa"><div class="qa-inner"><div class="qa-head">💡 Solution</div><pre"><span class="cm"># left_anti: opposite of left_semi
+# Returns LEFT rows where NO match in right
+# Like SQL: WHERE NOT EXISTS (...)</span>
+result = emp_df.join(orders_df, on=<span class="st">"emp_id"</span>, how=<span class="st">"left_anti"</span>)
+result.show()
+<span class="cm"># Returns employees 4,6,7,8,9,10 (no orders)</span></pre></div></div></div>
+
+        <div class="qi" onclick="toggleQ(this)"><span class="qn">07</span><span class="qt">Get employee names with their department name and location.</span><span class="qarrow">▶</span>
+        <div class="qa"><div class="qa-inner"><div class="qa-head">💡 Solution</div><pre">result = emp_df \
+    .join(dept_df, on=<span class="st">"dept_id"</span>, how=<span class="st">"left"</span>) \
+    .select(
+        emp_df[<span class="st">"name"</span>],
+        dept_df[<span class="st">"dept_name"</span>],
+        dept_df[<span class="st">"location"</span>]
+    )
+result.show()</pre></div></div></div>
+
+        <div class="qi" onclick="toggleQ(this)"><span class="qn">08</span><span class="qt">Self join: Show each employee with their manager's name.</span><span class="qarrow">▶</span>
+        <div class="qa"><div class="qa-inner"><div class="qa-head">💡 Solution</div><pre"><span class="cm"># Self join: join DF with itself using alias</span>
+emp_alias  = emp_df.alias(<span class="st">"e"</span>)
+mgr_alias  = emp_df.alias(<span class="st">"m"</span>)
+
+result = emp_alias.join(
+    mgr_alias,
+    F.col(<span class="st">"e.manager_id"</span>) == F.col(<span class="st">"m.emp_id"</span>),
+    how=<span class="st">"left"</span>
+).select(
+    F.col(<span class="st">"e.name"</span>).alias(<span class="st">"employee"</span>),
+    F.col(<span class="st">"m.name"</span>).alias(<span class="st">"manager"</span>)
+)
+result.show()</pre></div></div></div>
+
+        <div class="qi" onclick="toggleQ(this)"><span class="qn">09</span><span class="qt">Join orders with employees to get employee name per order.</span><span class="qarrow">▶</span>
+        <div class="qa"><div class="qa-inner"><div class="qa-head">💡 Solution</div><pre">result = orders_df.join(emp_df, on=<span class="st">"emp_id"</span>, how=<span class="st">"left"</span>) \
+    .select(
+        <span class="st">"order_id"</span>, <span class="st">"order_date"</span>,
+        emp_df[<span class="st">"name"</span>].alias(<span class="st">"employee"</span>),
+        <span class="st">"qty"</span>
+    )
+result.show()
+<span class="cm"># order 1006: emp_id=99 → name=NULL (orphan order)</span></pre></div></div></div>
+
+        <div class="qi" onclick="toggleQ(this)"><span class="qn">10</span><span class="qt">Cross join: Generate all combinations of employees and departments.</span><span class="qarrow">▶</span>
+        <div class="qa"><div class="qa-inner"><div class="qa-head">💡 Solution</div><pre"><span class="cm"># Cross join = Cartesian product
+# 10 employees × 5 departments = 50 rows</span>
+result = emp_df.crossJoin(dept_df)
+<span class="fn">print</span>(<span class="st">f"Rows: {result.count()}"</span>)  <span class="cm"># 50</span>
+result.select(<span class="st">"name"</span>, <span class="st">"dept_name"</span>).show()
+
+<span class="cm"># Alternative syntax:</span>
+result = emp_df.join(dept_df, how=<span class="st">"cross"</span>)</pre></div></div></div>
+
+      </div>
+    </div>
+
+    <!-- MEDIUM -->
+    <div class="qblock medium">
+      <div class="qblock-head"><span class="lvl">MEDIUM</span><span class="qcount">10 Questions</span></div>
+      <div class="qlist">
+
+        <div class="qi" onclick="toggleQ(this)"><span class="qn">01</span><span class="qt">3-table join: employees + departments + orders — get full order details.</span><span class="qarrow">▶</span>
+        <div class="qa"><div class="qa-inner"><div class="qa-head">💡 Solution</div><pre">result = orders_df \
+    .join(emp_df,  on=<span class="st">"emp_id"</span>,  how=<span class="st">"left"</span>) \
+    .join(dept_df, on=<span class="st">"dept_id"</span>, how=<span class="st">"left"</span>) \
+    .select(
+        <span class="st">"order_id"</span>, <span class="st">"order_date"</span>,
+        emp_df[<span class="st">"name"</span>].alias(<span class="st">"employee"</span>),
+        <span class="st">"dept_name"</span>, <span class="st">"location"</span>, <span class="st">"qty"</span>
+    )
+result.show(truncate=<span class="kw">False</span>)</pre></div></div></div>
+
+        <div class="qi" onclick="toggleQ(this)"><span class="qn">02</span><span class="qt">Broadcast join: Join large emp_df with small dept_df efficiently.</span><span class="qarrow">▶</span>
+        <div class="qa"><div class="qa-inner"><div class="qa-head">💡 Solution</div><pre"><span class="kw">from</span> pyspark.sql.functions <span class="kw">import</span> broadcast
+
+<span class="cm"># dept_df is small → broadcast it</span>
+result = emp_df.join(
+    broadcast(dept_df),
+    on=<span class="st">"dept_id"</span>,
+    how=<span class="st">"left"</span>
+)
+result.show()
+
+<span class="cm"># Verify broadcast in explain plan</span>
+result.explain()
+<span class="cm"># Look for: BroadcastHashJoin in physical plan
+
+# Set threshold (default 10MB)</span>
+spark.conf.set(<span class="st">"spark.sql.autoBroadcastJoinThreshold"</span>, <span class="st">"52428800"</span>)  <span class="cm"># 50MB</span></pre></div></div></div>
+
+        <div class="qi" onclick="toggleQ(this)"><span class="qn">03</span><span class="qt">Anti-join: Find orders where employee doesn't exist in emp_df.</span><span class="qarrow">▶</span>
+        <div class="qa"><div class="qa-inner"><div class="qa-head">💡 Solution</div><pre"><span class="cm"># Orphan orders — emp_id not in employees table</span>
+orphan_orders = orders_df.join(
+    emp_df, on=<span class="st">"emp_id"</span>, how=<span class="st">"left_anti"</span>
+)
+orphan_orders.show()
+<span class="cm"># Returns order 1006 (emp_id=99 doesn't exist)</span>
+
+<span class="cm"># Useful for data quality checks in ETL!</span></pre></div></div></div>
+
+        <div class="qi" onclick="toggleQ(this)"><span class="qn">04</span><span class="qt">Join on multiple conditions: emp dept_id matches AND salary > dept budget/1000.</span><span class="qarrow">▶</span>
+        <div class="qa"><div class="qa-inner"><div class="qa-head">💡 Solution</div><pre">result = emp_df.join(
+    dept_df,
+    (emp_df[<span class="st">"dept_id"</span>] == dept_df[<span class="st">"dept_id"</span>]) &
+    (emp_df[<span class="st">"salary"</span>] > dept_df[<span class="st">"budget"</span>] / <span class="nu">1000</span>),
+    how=<span class="st">"inner"</span>
+).select(
+    emp_df[<span class="st">"name"</span>], emp_df[<span class="st">"salary"</span>],
+    dept_df[<span class="st">"dept_name"</span>], dept_df[<span class="st">"budget"</span>]
+)
+result.show()</pre></div></div></div>
+
+        <div class="qi" onclick="toggleQ(this)"><span class="qn">05</span><span class="qt">Handle duplicate column names after join using alias.</span><span class="qarrow">▶</span>
+        <div class="qa"><div class="qa-inner"><div class="qa-head">💡 Solution</div><pre"><span class="cm"># Problem: both have dept_id after column expression join</span>
+result = emp_df.alias(<span class="st">"e"</span>).join(
+    dept_df.alias(<span class="st">"d"</span>),
+    F.col(<span class="st">"e.dept_id"</span>) == F.col(<span class="st">"d.dept_id"</span>),
+    how=<span class="st">"left"</span>
+)
+<span class="cm"># Now access with alias prefix:</span>
+result.select(
+    F.col(<span class="st">"e.dept_id"</span>).alias(<span class="st">"emp_dept_id"</span>),
+    F.col(<span class="st">"e.name"</span>),
+    F.col(<span class="st">"d.dept_name"</span>),
+    F.col(<span class="st">"d.location"</span>)
+).show()
+
+<span class="cm"># Best practice: use string "dept_id" in on= to avoid duplicates</span>
+clean = emp_df.join(dept_df, on=<span class="st">"dept_id"</span>, how=<span class="st">"left"</span>)
+<span class="fn">print</span>(clean.columns)  <span class="cm"># dept_id appears only once!</span></pre></div></div></div>
+
+        <div class="qi" onclick="toggleQ(this)"><span class="qn">06</span><span class="qt">Find employees earning more than their manager (self join).</span><span class="qarrow">▶</span>
+        <div class="qa"><div class="qa-inner"><div class="qa-head">💡 Solution</div><pre">emp = emp_df.alias(<span class="st">"e"</span>)
+mgr = emp_df.alias(<span class="st">"m"</span>)
+
+result = emp.join(
+    mgr,
+    F.col(<span class="st">"e.manager_id"</span>) == F.col(<span class="st">"m.emp_id"</span>),
+    how=<span class="st">"inner"</span>
+).filter(
+    F.col(<span class="st">"e.salary"</span>) > F.col(<span class="st">"m.salary"</span>)
+).select(
+    F.col(<span class="st">"e.name"</span>).alias(<span class="st">"employee"</span>),
+    F.col(<span class="st">"e.salary"</span>).alias(<span class="st">"emp_salary"</span>),
+    F.col(<span class="st">"m.name"</span>).alias(<span class="st">"manager"</span>),
+    F.col(<span class="st">"m.salary"</span>).alias(<span class="st">"mgr_salary"</span>)
+)
+result.show()</pre></div></div></div>
+
+        <div class="qi" onclick="toggleQ(this)"><span class="qn">07</span><span class="qt">Departments with more than 2 employees — using semi join + groupBy.</span><span class="qarrow">▶</span>
+        <div class="qa"><div class="qa-inner"><div class="qa-head">💡 Solution</div><pre"><span class="cm"># Step 1: find dept_ids with > 2 employees</span>
+large_depts = emp_df.groupBy(<span class="st">"dept_id"</span>) \
+    .count() \
+    .filter(F.col(<span class="st">"count"</span>) > <span class="nu">2</span>) \
+    .select(<span class="st">"dept_id"</span>)
+
+<span class="cm"># Step 2: semi join to get dept details</span>
+result = dept_df.join(large_depts, on=<span class="st">"dept_id"</span>, how=<span class="st">"left_semi"</span>)
+result.show()
+<span class="cm"># Returns Engineering (3 emps), HR (2? no), Finance (2? no)</span></pre></div></div></div>
+
+        <div class="qi" onclick="toggleQ(this)"><span class="qn">08</span><span class="qt">Full outer join + coalesce to merge dept_id from both sides.</span><span class="qarrow">▶</span>
+        <div class="qa"><div class="qa-inner"><div class="qa-head">💡 Solution</div><pre">result = emp_df.alias(<span class="st">"e"</span>).join(
+    dept_df.alias(<span class="st">"d"</span>),
+    F.col(<span class="st">"e.dept_id"</span>) == F.col(<span class="st">"d.dept_id"</span>),
+    how=<span class="st">"full"</span>
+).select(
+    F.coalesce(F.col(<span class="st">"e.dept_id"</span>),
+               F.col(<span class="st">"d.dept_id"</span>)).alias(<span class="st">"dept_id"</span>),
+    F.col(<span class="st">"e.name"</span>).alias(<span class="st">"employee"</span>),
+    F.col(<span class="st">"d.dept_name"</span>)
+)
+result.orderBy(<span class="st">"dept_id"</span>).show()</pre></div></div></div>
+
+        <div class="qi" onclick="toggleQ(this)"><span class="qn">09</span><span class="qt">Non-equi join: Find employees whose salary falls in a salary band table.</span><span class="qarrow">▶</span>
+        <div class="qa"><div class="qa-inner"><div class="qa-head">💡 Solution</div><pre"><span class="cm"># Salary bands table</span>
+bands = spark.createDataFrame([
+    (<span class="st">"Junior"</span>, <span class="nu">0</span>,     <span class="nu">60000</span>),
+    (<span class="st">"Mid"</span>,    <span class="nu">60001</span>, <span class="nu">80000</span>),
+    (<span class="st">"Senior"</span>, <span class="nu">80001</span>, <span class="nu">999999</span>),
+], [<span class="st">"band"</span>, <span class="st">"min_sal"</span>, <span class="st">"max_sal"</span>])
+
+<span class="cm"># Non-equi join — join condition uses BETWEEN logic</span>
+result = emp_df.join(
+    bands,
+    (emp_df[<span class="st">"salary"</span>] >= bands[<span class="st">"min_sal"</span>]) &
+    (emp_df[<span class="st">"salary"</span>] <= bands[<span class="st">"max_sal"</span>]),
+    how=<span class="st">"left"</span>
+).select(<span class="st">"name"</span>, <span class="st">"salary"</span>, <span class="st">"band"</span>)
+result.show()</pre></div></div></div>
+
+        <div class="qi" onclick="toggleQ(this)"><span class="qn">10</span><span class="qt">Employee 360 view: combine employee + dept + order count in one query.</span><span class="qarrow">▶</span>
+        <div class="qa"><div class="qa-inner"><div class="qa-head">💡 Solution</div><pre"><span class="cm"># Order summary per employee</span>
+order_summary = orders_df.groupBy(<span class="st">"emp_id"</span>).agg(
+    F.count(<span class="st">"order_id"</span>).alias(<span class="st">"order_count"</span>),
+    F.sum(<span class="st">"qty"</span>).alias(<span class="st">"total_qty"</span>)
+)
+
+<span class="cm"># Full join chain</span>
+result = emp_df \
+    .join(broadcast(dept_df), on=<span class="st">"dept_id"</span>, how=<span class="st">"left"</span>) \
+    .join(order_summary,       on=<span class="st">"emp_id"</span>,  how=<span class="st">"left"</span>) \
+    .select(
+        <span class="st">"emp_id"</span>, <span class="st">"name"</span>, <span class="st">"salary"</span>,
+        <span class="st">"dept_name"</span>, <span class="st">"location"</span>,
+        F.coalesce(<span class="st">"order_count"</span>, F.lit(<span class="nu">0</span>)).alias(<span class="st">"orders"</span>),
+        F.coalesce(<span class="st">"total_qty"</span>,   F.lit(<span class="nu">0</span>)).alias(<span class="st">"total_qty"</span>)
+    )
+result.show()</pre></div></div></div>
+
+      </div>
+    </div>
+
+    <!-- HARD -->
+    <div class="qblock hard">
+      <div class="qblock-head"><span class="lvl">HARD</span><span class="qcount">10 Questions</span></div>
+      <div class="qlist">
+
+        <div class="qi" onclick="toggleQ(this)"><span class="qn">01</span><span class="qt">Skewed join: Handle data skew using salting technique.</span><span class="qarrow">▶</span>
+        <div class="qa"><div class="qa-inner"><div class="qa-head">💡 Solution</div><pre"><span class="cm"># Problem: dept_id=10 (Engineering) has 60% of rows → SKEW
+# Fix: Salting — add random suffix to distribute load</span>
+salt = <span class="nu">4</span>
+
+<span class="cm"># Add random salt to large (skewed) table</span>
+emp_salted = emp_df.withColumn(
+    <span class="st">"salt_key"</span>,
+    F.concat(
+        F.col(<span class="st">"dept_id"</span>).cast(<span class="st">"string"</span>),
+        F.lit(<span class="st">"_"</span>),
+        (F.rand() * salt).cast(<span class="st">"int"</span>).cast(<span class="st">"string"</span>)
+    )
+)
+
+<span class="cm"># Explode small table with all salt values</span>
+from pyspark.sql.functions import array, explode, lit
+dept_salted = dept_df.withColumn(
+    <span class="st">"salt_arr"</span>,
+    array([F.concat(F.col(<span class="st">"dept_id"</span>).cast(<span class="st">"string"</span>),
+                    F.lit(<span class="st">"_"</span>), F.lit(str(i)))
+           for i in range(salt)])
+).withColumn(<span class="st">"salt_key"</span>, explode(<span class="st">"salt_arr"</span>)) \
+ .drop(<span class="st">"salt_arr"</span>)
+
+<span class="cm"># Join on salted key</span>
+result = emp_salted.join(
+    dept_salted, on=<span class="st">"salt_key"</span>, how=<span class="st">"left"</span>
+).drop(<span class="st">"salt_key"</span>)
+result.show()</pre></div></div></div>
+
+        <div class="qi" onclick="toggleQ(this)"><span class="qn">02</span><span class="qt">Incremental join: Merge new data with existing — upsert pattern.</span><span class="qarrow">▶</span>
+        <div class="qa"><div class="qa-inner"><div class="qa-head">💡 Solution</div><pre"><span class="cm"># Simulate: existing + new data merge (without Delta)</span>
+existing = emp_df
+new_records = spark.createDataFrame([
+    (<span class="nu">3</span>,  <span class="st">"Amit"</span>,  <span class="nu">10</span>, <span class="nu">98000.0</span>, <span class="nu">1</span>),  <span class="cm"># update</span>
+    (<span class="nu">11</span>, <span class="st">"Neha"</span>,  <span class="nu">20</span>, <span class="nu">70000.0</span>, <span class="nu">2</span>),  <span class="cm"># insert</span>
+], [<span class="st">"emp_id"</span>, <span class="st">"name"</span>, <span class="st">"dept_id"</span>, <span class="st">"salary"</span>, <span class="st">"manager_id"</span>])
+
+<span class="cm"># Anti-join: existing rows NOT in new (unchanged)</span>
+unchanged = existing.join(
+    new_records.select(<span class="st">"emp_id"</span>),
+    on=<span class="st">"emp_id"</span>, how=<span class="st">"left_anti"</span>
+)
+
+<span class="cm"># Union unchanged + new (updates + inserts)</span>
+merged = unchanged.unionByName(new_records)
+merged.orderBy(<span class="st">"emp_id"</span>).show()</pre></div></div></div>
+
+        <div class="qi" onclick="toggleQ(this)"><span class="qn">03</span><span class="qt">Range join: Match events to time windows (non-equi join).</span><span class="qarrow">▶</span>
+        <div class="qa"><div class="qa-inner"><div class="qa-head">💡 Solution</div><pre"><span class="cm"># Events table</span>
+events = spark.createDataFrame([
+    (<span class="nu">1</span>, <span class="st">"login"</span>,  <span class="st">"2024-01-05"</span>),
+    (<span class="nu">2</span>, <span class="st">"purchase"</span>,<span class="st">"2024-02-10"</span>),
+    (<span class="nu">3</span>, <span class="st">"logout"</span>, <span class="st">"2024-03-20"</span>),
+], [<span class="st">"event_id"</span>, <span class="st">"event_type"</span>, <span class="st">"event_date"</span>])
+
+<span class="cm"># Campaigns table</span>
+campaigns = spark.createDataFrame([
+    (<span class="st">"Camp_A"</span>, <span class="st">"2024-01-01"</span>, <span class="st">"2024-01-31"</span>),
+    (<span class="st">"Camp_B"</span>, <span class="st">"2024-02-01"</span>, <span class="st">"2024-02-28"</span>),
+], [<span class="st">"campaign"</span>, <span class="st">"start_dt"</span>, <span class="st">"end_dt"</span>])
+
+<span class="cm"># Range join: find which campaign each event belongs to</span>
+result = events.join(
+    campaigns,
+    (events[<span class="st">"event_date"</span>] >= campaigns[<span class="st">"start_dt"</span>]) &
+    (events[<span class="st">"event_date"</span>] <= campaigns[<span class="st">"end_dt"</span>]),
+    how=<span class="st">"left"</span>
+)
+result.show()</pre></div></div></div>
+
+        <div class="qi" onclick="toggleQ(this)"><span class="qn">04</span><span class="qt">Detect data drift: Compare schema and row counts between two DataFrames.</span><span class="qarrow">▶</span>
+        <div class="qa"><div class="qa-inner"><div class="qa-head">💡 Solution</div><pre">old_df = emp_df
+new_df = emp_df.withColumn(<span class="st">"new_col"</span>, F.lit(<span class="st">"test"</span>)) \
+               .filter(F.col(<span class="st">"dept_id"</span>) != <span class="nu">30</span>)
+
+<span class="cm"># Schema drift</span>
+old_cols = set(old_df.columns)
+new_cols = set(new_df.columns)
+added   = new_cols - old_cols
+removed = old_cols - new_cols
+<span class="fn">print</span>(<span class="st">f"Added cols:   {added}"</span>)
+<span class="fn">print</span>(<span class="st">f"Removed cols: {removed}"</span>)
+
+<span class="cm"># Row count drift</span>
+old_cnt = old_df.count()
+new_cnt = new_df.count()
+drift   = abs(new_cnt - old_cnt) / old_cnt * <span class="nu">100</span>
+<span class="fn">print</span>(<span class="st">f"Row drift: {drift:.1f}%"</span>)
+<span class="kw">if</span> drift > <span class="nu">10</span>:
+    <span class="fn">print</span>(<span class="st">"⚠️  High drift detected!"</span>)</pre></div></div></div>
+
+        <div class="qi" onclick="toggleQ(this)"><span class="qn">05</span><span class="qt">Recursive hierarchy using iterative joins (manager chain 3 levels).</span><span class="qarrow">▶</span>
+        <div class="qa"><div class="qa-inner"><div class="qa-head">💡 Solution</div><pre">e  = emp_df.alias(<span class="st">"e"</span>)
+m1 = emp_df.alias(<span class="st">"m1"</span>)
+m2 = emp_df.alias(<span class="st">"m2"</span>)
+
+result = e \
+    .join(m1, F.col(<span class="st">"e.manager_id"</span>) == F.col(<span class="st">"m1.emp_id"</span>), <span class="st">"left"</span>) \
+    .join(m2, F.col(<span class="st">"m1.manager_id"</span>) == F.col(<span class="st">"m2.emp_id"</span>), <span class="st">"left"</span>) \
+    .select(
+        F.col(<span class="st">"e.name"</span>).alias(<span class="st">"employee"</span>),
+        F.col(<span class="st">"m1.name"</span>).alias(<span class="st">"manager"</span>),
+        F.col(<span class="st">"m2.name"</span>).alias(<span class="st">"grand_manager"</span>)
+    )
+result.show()</pre></div></div></div>
+
+      </div>
+    </div>
+
+    <!-- INTERVIEW -->
+    <div class="qblock interview">
+      <div class="qblock-head"><span class="lvl">INTERVIEW</span><span class="qcount">5 Questions</span></div>
+      <div class="qlist">
+
+        <div class="qi" onclick="toggleQ(this)"><span class="qn">01</span><span class="qt">What join strategies does Spark use? When is each chosen?</span><span class="qarrow">▶</span>
+        <div class="qa"><div class="qa-inner"><div class="qa-head">💡 Solution</div><pre"><span class="cm"># Spark chooses join strategy based on data size:
+
+# 1. BROADCAST HASH JOIN (fastest)
+#    - One side < autoBroadcastJoinThreshold (default 10MB)
+#    - Small table sent to ALL executors
+#    - No shuffle needed!
+result = emp_df.join(broadcast(dept_df), "dept_id")
+result.explain()  # BroadcastHashJoin
+
+# 2. SORT MERGE JOIN (default for large tables)
+#    - Both sides sorted on join key, then merged
+#    - Requires shuffle — both sides repartitioned
+#    - Good for large + large joins
+spark.conf.set("spark.sql.autoBroadcastJoinThreshold", "-1")  # disable broadcast
+result = emp_df.join(dept_df, "dept_id")
+result.explain()  # SortMergeJoin
+
+# 3. SHUFFLE HASH JOIN
+#    - One side hashed, other probes the hash table
+#    - Used when one side is small but > broadcast threshold
+
+# 4. CARTESIAN (CROSS) JOIN
+#    - No join condition — full cross product
+#    - Very expensive, avoid unless needed
+
+# Force a strategy:
+result = emp_df.hint("broadcast").join(dept_df, "dept_id")
+result = emp_df.hint("merge").join(dept_df, "dept_id")</span></pre></div></div></div>
+
+        <div class="qi" onclick="toggleQ(this)"><span class="qn">02</span><span class="qt">left_semi vs inner join — key differences?</span><span class="qarrow">▶</span>
+        <div class="qa"><div class="qa-inner"><div class="qa-head">💡 Solution</div><pre"><span class="cm"># INNER JOIN:
+# - Returns columns from BOTH tables
+# - If right has multiple matches → LEFT row appears MULTIPLE times (duplicates!)</span>
+inner = emp_df.join(orders_df, <span class="st">"emp_id"</span>, <span class="st">"inner"</span>)
+<span class="fn">print</span>(inner.count())  <span class="cm"># > 10 because emp 1 has 2 orders</span>
+
+<span class="cm"># LEFT SEMI JOIN:
+# - Returns ONLY LEFT columns
+# - Each left row appears AT MOST ONCE (no duplicates!)
+# - Faster than inner join (no data from right side fetched)</span>
+semi = emp_df.join(orders_df, <span class="st">"emp_id"</span>, <span class="st">"left_semi"</span>)
+<span class="fn">print</span>(semi.count())   <span class="cm"># ≤ 10 — each emp appears once</span>
+
+<span class="cm"># Use left_semi when:
+# - You only need left table columns
+# - Just checking IF match exists (filter/existence check)
+# - Avoiding duplicates from one-to-many relationships</span></pre></div></div></div>
+
+        <div class="qi" onclick="toggleQ(this)"><span class="qn">03</span><span class="qt">Why does NULL in join key cause rows to be dropped?</span><span class="qarrow">▶</span>
+        <div class="qa"><div class="qa-inner"><div class="qa-head">💡 Solution</div><pre"><span class="cm"># NULL != NULL in SQL/PySpark
+# So NULL join keys NEVER match — rows are silently dropped!
+
+# Example: Meena has salary=NULL, not dept_id=NULL
+# But if we had NULL in join key:
+null_emp = emp_df.withColumn("dept_id",
+    F.when(F.col("name") == "Pooja", F.lit(None))
+     .otherwise(F.col("dept_id")).cast("integer"))
+
+result = null_emp.join(dept_df, "dept_id", "inner")
+result.show()  # Pooja is MISSING! NULL dept_id didn't match
+
+# Fix: Use LEFT join so Pooja shows with NULL dept info
+result = null_emp.join(dept_df, "dept_id", "left")
+
+# Or: Replace NULL key before join
+null_emp.fillna({"dept_id": -1}) \
+        .join(dept_df, "dept_id", "left") \
+        .show()</span></pre></div></div></div>
+
+        <div class="qi" onclick="toggleQ(this)"><span class="qn">04</span><span class="qt">Real DE scenario: Reconciliation — find missing records between source and target.</span><span class="qarrow">▶</span>
+        <div class="qa"><div class="qa-inner"><div class="qa-head">💡 Solution</div><pre"><span class="cm"># Source: what should be in target</span>
+source = emp_df
+<span class="cm"># Target: what actually got loaded (missing some)</span>
+target = emp_df.filter(F.col(<span class="st">"dept_id"</span>) != <span class="nu">30</span>)
+
+<span class="cm"># Missing in target</span>
+missing = source.join(
+    target.select(<span class="st">"emp_id"</span>),
+    on=<span class="st">"emp_id"</span>, how=<span class="st">"left_anti"</span>
+)
+<span class="fn">print</span>(<span class="st">f"Missing records: {missing.count()}"</span>)
+missing.show()
+
+<span class="cm"># Extra in target (shouldn't be there)</span>
+extra = target.join(
+    source.select(<span class="st">"emp_id"</span>),
+    on=<span class="st">"emp_id"</span>, how=<span class="st">"left_anti"</span>
+)
+<span class="fn">print</span>(<span class="st">f"Extra records: {extra.count()}"</span>)
+
+<span class="cm"># Mismatch in values (same key, different values)</span>
+mismatch = source.alias(<span class="st">"s"</span>).join(
+    target.alias(<span class="st">"t"</span>), on=<span class="st">"emp_id"</span>, how=<span class="st">"inner"</span>
+).filter(
+    F.col(<span class="st">"s.salary"</span>) != F.col(<span class="st">"t.salary"</span>)
+)
+<span class="fn">print</span>(<span class="st">f"Value mismatches: {mismatch.count()}"</span>)</pre></div></div></div>
+
+        <div class="qi" onclick="toggleQ(this)"><span class="qn">05</span><span class="qt">Optimize a join pipeline for production — checklist.</span><span class="qarrow">▶</span>
+        <div class="qa"><div class="qa-inner"><div class="qa-head">💡 Solution</div><pre"><span class="cm"># PRODUCTION JOIN OPTIMIZATION CHECKLIST:
+
+# 1. Filter BEFORE join (reduce data early)
+emp_filtered = emp_df.filter(F.col("salary") > 60000)  # before join!
+result = emp_filtered.join(dept_df, "dept_id", "left")
+
+# 2. Broadcast small tables
+result = emp_df.join(broadcast(dept_df), "dept_id")
+
+# 3. Select only needed columns before joining
+emp_slim  = emp_df.select("emp_id", "name", "dept_id", "salary")
+dept_slim = dept_df.select("dept_id", "dept_name")
+result = emp_slim.join(dept_slim, "dept_id")
+
+# 4. Use string key in join (avoids duplicate columns)
+result = emp_df.join(dept_df, on="dept_id", how="left")
+
+# 5. Enable AQE (Spark 3.x) — auto-optimizes at runtime
+spark.conf.set("spark.sql.adaptive.enabled", "true")
+spark.conf.set("spark.sql.adaptive.skewJoin.enabled", "true")
+
+# 6. Check execution plan
+result.explain("formatted")  # look for: BroadcastHashJoin, SortMergeJoin
+
+# 7. Repartition on join key before repeated joins
+emp_repartitioned = emp_df.repartition(8, "dept_id")
+result = emp_repartitioned.join(dept_df, "dept_id")  # less shuffle!</span></pre></div></div></div>
+
+      </div>
+    </div>
+  </div>
+</div>
+<!-- END JOINS -->
+
+
+<!-- ══════════════════ PART 2: WINDOW FUNCTIONS ══════════════════ -->
+<div class="day-panel" id="window">
+
+  <div class="day-hero">
+    <div class="day-big">3B</div>
+    <div class="day-meta">
+      <h2>Window Functions — ROW_NUMBER, RANK, DENSE_RANK, LAG, LEAD, NTILE, Running Totals</h2>
+      <p>Row-level analytics without collapsing data. Ranking, running totals, comparing with previous rows — Data Engineering mein har jagah use hota hai.</p>
+      <div class="pill-row">
+        <span class="pill">Window.partitionBy</span>
+        <span class="pill">Window.orderBy</span>
+        <span class="pill">ROW_NUMBER</span>
+        <span class="pill">RANK / DENSE_RANK</span>
+        <span class="pill">LAG / LEAD</span>
+        <span class="pill">NTILE</span>
+        <span class="pill">SUM OVER</span>
+        <span class="pill">FIRST_VALUE / LAST_VALUE</span>
+        <span class="pill">ROWS BETWEEN</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="concept-box">
+    <h4>Key Concepts — Window Functions</h4>
+    <ul>
+      <li><strong>Window spec</strong> — defines partition + order + frame. Created with Window class.</li>
+      <li><strong>partitionBy</strong> — Group rows (like GROUP BY but keeps all rows).</li>
+      <li><strong>orderBy</strong> — Order within each partition.</li>
+      <li><strong>ROW_NUMBER()</strong> — Unique sequential number per partition. No ties.</li>
+      <li><strong>RANK()</strong> — Same rank for ties, skips next rank (1,2,2,4).</li>
+      <li><strong>DENSE_RANK()</strong> — Same rank for ties, no skip (1,2,2,3).</li>
+      <li><strong>LAG(col, n)</strong> — Value from n rows BEFORE current row.</li>
+      <li><strong>LEAD(col, n)</strong> — Value from n rows AFTER current row.</li>
+      <li><strong>ROWS BETWEEN</strong> — Define sliding frame for aggregations.</li>
+      <li><strong>Cannot use in WHERE</strong> — Must wrap in subquery/CTE to filter on window result.</li>
+    </ul>
+  </div>
+
+  <div class="sec-label">⚙️ Setup</div>
+  <div class="code-block">
+    <div class="code-block-head">🐍 Window Function Imports + Sample Data</div>
+    <pre><span class="kw">from</span> pyspark.sql <span class="kw">import</span> SparkSession, functions <span class="kw">as</span> F
+<span class="kw">from</span> pyspark.sql.window <span class="kw">import</span> Window
+
+spark = SparkSession.builder.appName(<span class="st">"Day3Window"</span>).getOrCreate()
+
+<span class="cm"># monthly_sales</span>
+ms_data = [
+    (<span class="nu">1</span>, <span class="nu">1</span>, <span class="st">"2024-01"</span>, <span class="nu">15000.0</span>, <span class="st">"North"</span>),
+    (<span class="nu">2</span>, <span class="nu">1</span>, <span class="st">"2024-02"</span>, <span class="nu">22000.0</span>, <span class="st">"North"</span>),
+    (<span class="nu">3</span>, <span class="nu">1</span>, <span class="st">"2024-03"</span>, <span class="nu">18000.0</span>, <span class="st">"North"</span>),
+    (<span class="nu">4</span>, <span class="nu">2</span>, <span class="st">"2024-01"</span>, <span class="nu">8000.0</span>,  <span class="st">"South"</span>),
+    (<span class="nu">5</span>, <span class="nu">2</span>, <span class="st">"2024-02"</span>, <span class="nu">12000.0</span>, <span class="st">"South"</span>),
+    (<span class="nu">6</span>, <span class="nu">2</span>, <span class="st">"2024-03"</span>, <span class="nu">9500.0</span>,  <span class="st">"South"</span>),
+    (<span class="nu">7</span>, <span class="nu">3</span>, <span class="st">"2024-01"</span>, <span class="nu">25000.0</span>, <span class="st">"East"</span>),
+    (<span class="nu">8</span>, <span class="nu">3</span>, <span class="st">"2024-02"</span>, <span class="nu">21000.0</span>, <span class="st">"East"</span>),
+    (<span class="nu">9</span>, <span class="nu">3</span>, <span class="st">"2024-03"</span>, <span class="nu">28000.0</span>, <span class="st">"East"</span>),
+    (<span class="nu">10</span>,<span class="nu">4</span>, <span class="st">"2024-01"</span>, <span class="nu">11000.0</span>, <span class="st">"West"</span>),
+    (<span class="nu">11</span>,<span class="nu">4</span>, <span class="st">"2024-02"</span>, <span class="nu">14000.0</span>, <span class="st">"West"</span>),
+    (<span class="nu">12</span>,<span class="nu">4</span>, <span class="st">"2024-03"</span>, <span class="nu">13000.0</span>, <span class="st">"West"</span>),
+]
+ms_df = spark.createDataFrame(ms_data,
+    [<span class="st">"id"</span>, <span class="st">"emp_id"</span>, <span class="st">"month"</span>, <span class="st">"revenue"</span>, <span class="st">"region"</span>])
+
+<span class="cm"># exam_scores</span>
+scores_data = [
+    (<span class="nu">1</span>, <span class="st">"Rahul"</span>, <span class="st">"Math"</span>,    <span class="nu">85</span>),
+    (<span class="nu">2</span>, <span class="st">"Priya"</span>, <span class="st">"Math"</span>,    <span class="nu">92</span>),
+    (<span class="nu">3</span>, <span class="st">"Amit"</span>,  <span class="st">"Math"</span>,    <span class="nu">85</span>),
+    (<span class="nu">4</span>, <span class="st">"Sneha"</span>, <span class="st">"Math"</span>,    <span class="nu">95</span>),
+    (<span class="nu">1</span>, <span class="st">"Rahul"</span>, <span class="st">"Science"</span>, <span class="nu">78</span>),
+    (<span class="nu">2</span>, <span class="st">"Priya"</span>, <span class="st">"Science"</span>, <span class="nu">88</span>),
+    (<span class="nu">3</span>, <span class="st">"Amit"</span>,  <span class="st">"Science"</span>, <span class="nu">70</span>),
+    (<span class="nu">4</span>, <span class="st">"Sneha"</span>, <span class="st">"Science"</span>, <span class="nu">88</span>),
+]
+scores_df = spark.createDataFrame(scores_data,
+    [<span class="st">"student_id"</span>, <span class="st">"name"</span>, <span class="st">"subject"</span>, <span class="st">"score"</span>])</pre>
+  </div>
+
+  <div class="sec-label">❓ Questions — All Levels</div>
+  <div class="q-grid">
+
+    <!-- EASY -->
+    <div class="qblock easy">
+      <div class="qblock-head"><span class="lvl">EASY</span><span class="qcount">10 Questions</span></div>
+      <div class="qlist">
+
+        <div class="qi" onclick="toggleQ(this)"><span class="qn">01</span><span class="qt">Assign row numbers to employees ordered by salary DESC.</span><span class="qarrow">▶</span>
+        <div class="qa"><div class="qa-inner"><div class="qa-head">💡 Solution</div><pre"><span class="kw">from</span> pyspark.sql.window <span class="kw">import</span> Window
+
+w = Window.orderBy(F.col(<span class="st">"salary"</span>).desc())
+
+df = emp_df.withColumn(<span class="st">"row_num"</span>, F.row_number().over(w))
+df.select(<span class="st">"name"</span>, <span class="st">"salary"</span>, <span class="st">"row_num"</span>) \
+  .filter(F.col(<span class="st">"salary"</span>).isNotNull()) \
+  .show()</pre></div></div></div>
+
+        <div class="qi" onclick="toggleQ(this)"><span class="qn">02</span><span class="qt">Rank employees by salary using RANK (allow gaps for ties).</span><span class="qarrow">▶</span>
+        <div class="qa"><div class="qa-inner"><div class="qa-head">💡 Solution</div><pre">w = Window.orderBy(F.col(<span class="st">"salary"</span>).desc())
+
+df = emp_df.filter(F.col(<span class="st">"salary"</span>).isNotNull()) \
+    .withColumn(<span class="st">"rank"</span>, F.rank().over(w))
+
+df.select(<span class="st">"name"</span>, <span class="st">"salary"</span>, <span class="st">"rank"</span>).show()
+<span class="cm"># Ties get same rank, next rank is skipped
+# e.g., 1, 2, 2, 4 (not 3)</span></pre></div></div></div>
+
+        <div class="qi" onclick="toggleQ(this)"><span class="qn">03</span><span class="qt">DENSE_RANK: Rank Math scores without gaps.</span><span class="qarrow">▶</span>
+        <div class="qa"><div class="qa-inner"><div class="qa-head">💡 Solution</div><pre">w = Window.orderBy(F.col(<span class="st">"score"</span>).desc())
+
+scores_df.filter(F.col(<span class="st">"subject"</span>) == <span class="st">"Math"</span>) \
+    .withColumn(<span class="st">"dense_rank"</span>, F.dense_rank().over(w)) \
+    .select(<span class="st">"name"</span>, <span class="st">"score"</span>, <span class="st">"dense_rank"</span>) \
+    .show()
+<span class="cm"># Ties get same rank, NO skip: 1,2,2,3</span></pre></div></div></div>
+
+        <div class="qi" onclick="toggleQ(this)"><span class="qn">04</span><span class="qt">LAG: Get previous month's revenue per employee.</span><span class="qarrow">▶</span>
+        <div class="qa"><div class="qa-inner"><div class="qa-head">💡 Solution</div><pre">w = Window.partitionBy(<span class="st">"emp_id"</span>).orderBy(<span class="st">"month"</span>)
+
+df = ms_df.withColumn(
+    <span class="st">"prev_month_rev"</span>,
+    F.lag(<span class="st">"revenue"</span>, <span class="nu">1</span>).over(w)  <span class="cm"># 1 row back</span>
+)
+df.select(<span class="st">"emp_id"</span>, <span class="st">"month"</span>, <span class="st">"revenue"</span>, <span class="st">"prev_month_rev"</span>).show()
+<span class="cm"># First month per emp → NULL (no previous)</span></pre></div></div></div>
+
+        <div class="qi" onclick="toggleQ(this)"><span class="qn">05</span><span class="qt">LEAD: Get next month's revenue per employee.</span><span class="qarrow">▶</span>
+        <div class="qa"><div class="qa-inner"><div class="qa-head">💡 Solution</div><pre">w = Window.partitionBy(<span class="st">"emp_id"</span>).orderBy(<span class="st">"month"</span>)
+
+df = ms_df.withColumn(
+    <span class="st">"next_month_rev"</span>,
+    F.lead(<span class="st">"revenue"</span>, <span class="nu">1</span>, <span class="nu">0</span>).over(w)  <span class="cm"># default=0 if no next</span>
+)
+df.select(<span class="st">"emp_id"</span>, <span class="st">"month"</span>, <span class="st">"revenue"</span>, <span class="st">"next_month_rev"</span>).show()</pre></div></div></div>
+
+        <div class="qi" onclick="toggleQ(this)"><span class="qn">06</span><span class="qt">Compute running total of revenue per employee.</span><span class="qarrow">▶</span>
+        <div class="qa"><div class="qa-inner"><div class="qa-head">💡 Solution</div><pre">w = Window.partitionBy(<span class="st">"emp_id"</span>).orderBy(<span class="st">"month"</span>) \
+    .rowsBetween(Window.unboundedPreceding, Window.currentRow)
+
+df = ms_df.withColumn(
+    <span class="st">"running_total"</span>,
+    F.sum(<span class="st">"revenue"</span>).over(w)
+)
+df.select(<span class="st">"emp_id"</span>, <span class="st">"month"</span>, <span class="st">"revenue"</span>, <span class="st">"running_total"</span>).show()</pre></div></div></div>
+
+        <div class="qi" onclick="toggleQ(this)"><span class="qn">07</span><span class="qt">Divide employees into 4 salary quartiles using NTILE.</span><span class="qarrow">▶</span>
+        <div class="qa"><div class="qa-inner"><div class="qa-head">💡 Solution</div><pre">w = Window.orderBy(<span class="st">"salary"</span>)
+
+df = emp_df.filter(F.col(<span class="st">"salary"</span>).isNotNull()) \
+    .withColumn(<span class="st">"quartile"</span>, F.ntile(<span class="nu">4</span>).over(w))
+
+df.select(<span class="st">"name"</span>, <span class="st">"salary"</span>, <span class="st">"quartile"</span>) \
+  .orderBy(<span class="st">"salary"</span>) \
+  .show()
+<span class="cm"># 1=bottom 25%, 2=25-50%, 3=50-75%, 4=top 25%</span></pre></div></div></div>
+
+        <div class="qi" onclick="toggleQ(this)"><span class="qn">08</span><span class="qt">Rank each student within their subject (PARTITION BY subject).</span><span class="qarrow">▶</span>
+        <div class="qa"><div class="qa-inner"><div class="qa-head">💡 Solution</div><pre">w = Window.partitionBy(<span class="st">"subject"</span>).orderBy(F.col(<span class="st">"score"</span>).desc())
+
+scores_df \
+    .withColumn(<span class="st">"subject_rank"</span>, F.dense_rank().over(w)) \
+    .orderBy(<span class="st">"subject"</span>, <span class="st">"subject_rank"</span>) \
+    .show()</pre></div></div></div>
+
+        <div class="qi" onclick="toggleQ(this)"><span class="qn">09</span><span class="qt">FIRST_VALUE: Show first month's revenue alongside each row.</span><span class="qarrow">▶</span>
+        <div class="qa"><div class="qa-inner"><div class="qa-head">💡 Solution</div><pre">w = Window.partitionBy(<span class="st">"emp_id"</span>).orderBy(<span class="st">"month"</span>) \
+    .rowsBetween(Window.unboundedPreceding, Window.unboundedFollowing)
+
+df = ms_df.withColumn(
+    <span class="st">"first_month_rev"</span>,
+    F.first(<span class="st">"revenue"</span>).over(w)
+)
+df.select(<span class="st">"emp_id"</span>, <span class="st">"month"</span>, <span class="st">"revenue"</span>, <span class="st">"first_month_rev"</span>).show()</pre></div></div></div>
+
+        <div class="qi" onclick="toggleQ(this)"><span class="qn">10</span><span class="qt">Show company-wide average salary alongside each employee row.</span><span class="qarrow">▶</span>
+        <div class="qa"><div class="qa-inner"><div class="qa-head">💡 Solution</div><pre"><span class="cm"># Empty Window spec = entire DataFrame as one partition</span>
+w = Window.rowsBetween(Window.unboundedPreceding, Window.unboundedFollowing)
+
+df = emp_df.filter(F.col(<span class="st">"salary"</span>).isNotNull()) \
+    .withColumn(<span class="st">"company_avg"</span>, F.avg(<span class="st">"salary"</span>).over(w)) \
+    .withColumn(<span class="st">"diff_from_avg"</span>,
+                F.round(F.col(<span class="st">"salary"</span>) - F.col(<span class="st">"company_avg"</span>), <span class="nu">2</span>))
+
+df.select(<span class="st">"name"</span>, <span class="st">"salary"</span>, <span class="st">"company_avg"</span>, <span class="st">"diff_from_avg"</span>).show()</pre></div></div></div>
+
+      </div>
+    </div>
+
+    <!-- MEDIUM -->
+    <div class="qblock medium">
+      <div class="qblock-head"><span class="lvl">MEDIUM</span><span class="qcount">10 Questions</span></div>
+      <div class="qlist">
+
+        <div class="qi" onclick="toggleQ(this)"><span class="qn">01</span><span class="qt">Top 2 employees by revenue per region using DENSE_RANK.</span><span class="qarrow">▶</span>
+        <div class="qa"><div class="qa-inner"><div class="qa-head">💡 Solution</div><pre">w = Window.partitionBy(<span class="st">"region"</span>).orderBy(F.col(<span class="st">"revenue"</span>).desc())
+
+df = ms_df \
+    .withColumn(<span class="st">"rank"</span>, F.dense_rank().over(w)) \
+    .filter(F.col(<span class="st">"rank"</span>) <= <span class="nu">2</span>)
+
+df.select(<span class="st">"region"</span>, <span class="st">"emp_id"</span>, <span class="st">"month"</span>, <span class="st">"revenue"</span>, <span class="st">"rank"</span>) \
+  .orderBy(<span class="st">"region"</span>, <span class="st">"rank"</span>) \
+  .show()</pre></div></div></div>
+
+        <div class="qi" onclick="toggleQ(this)"><span class="qn">02</span><span class="qt">Month-over-month revenue growth % per employee using LAG.</span><span class="qarrow">▶</span>
+        <div class="qa"><div class="qa-inner"><div class="qa-head">💡 Solution</div><pre">w = Window.partitionBy(<span class="st">"emp_id"</span>).orderBy(<span class="st">"month"</span>)
+
+df = ms_df \
+    .withColumn(<span class="st">"prev_rev"</span>, F.lag(<span class="st">"revenue"</span>, <span class="nu">1</span>).over(w)) \
+    .withColumn(<span class="st">"mom_growth_pct"</span>,
+        F.round(
+            (F.col(<span class="st">"revenue"</span>) - F.col(<span class="st">"prev_rev"</span>)) * <span class="nu">100</span> /
+            F.nullif(F.col(<span class="st">"prev_rev"</span>), F.lit(<span class="nu">0</span>)),
+        <span class="nu">2</span>)
+    )
+
+df.select(<span class="st">"emp_id"</span>, <span class="st">"month"</span>, <span class="st">"revenue"</span>,
+          <span class="st">"prev_rev"</span>, <span class="st">"mom_growth_pct"</span>).show()</pre></div></div></div>
+
+        <div class="qi" onclick="toggleQ(this)"><span class="qn">03</span><span class="qt">De-duplicate: Keep only the latest record per emp_id using ROW_NUMBER.</span><span class="qarrow">▶</span>
+        <div class="qa"><div class="qa-inner"><div class="qa-head">💡 Solution</div><pre"><span class="cm"># Most common DE pattern — dedup with window!</span>
+dup_data = [
+    (<span class="nu">1</span>, <span class="st">"Rahul"</span>, <span class="nu">85000</span>, <span class="st">"2024-01-01"</span>),
+    (<span class="nu">1</span>, <span class="st">"Rahul"</span>, <span class="nu">90000</span>, <span class="st">"2024-06-01"</span>),  <span class="cm"># latest</span>
+    (<span class="nu">2</span>, <span class="st">"Priya"</span>, <span class="nu">62000</span>, <span class="st">"2024-01-01"</span>),
+]
+dup_df = spark.createDataFrame(dup_data,
+    [<span class="st">"emp_id"</span>, <span class="st">"name"</span>, <span class="st">"salary"</span>, <span class="st">"updated_at"</span>])
+
+w = Window.partitionBy(<span class="st">"emp_id"</span>) \
+          .orderBy(F.col(<span class="st">"updated_at"</span>).desc())
+
+deduped = dup_df \
+    .withColumn(<span class="st">"rn"</span>, F.row_number().over(w)) \
+    .filter(F.col(<span class="st">"rn"</span>) == <span class="nu">1</span>) \
+    .drop(<span class="st">"rn"</span>)
+
+deduped.show()  <span class="cm"># Rahul: 90000 (latest)</span></pre></div></div></div>
+
+        <div class="qi" onclick="toggleQ(this)"><span class="qn">04</span><span class="qt">3-month moving average of revenue per employee.</span><span class="qarrow">▶</span>
+        <div class="qa"><div class="qa-inner"><div class="qa-head">💡 Solution</div><pre">w = Window.partitionBy(<span class="st">"emp_id"</span>).orderBy(<span class="st">"month"</span>) \
+    .rowsBetween(-<span class="nu">2</span>, Window.currentRow)  <span class="cm"># 2 prev + current</span>
+
+df = ms_df.withColumn(
+    <span class="st">"moving_avg_3m"</span>,
+    F.round(F.avg(<span class="st">"revenue"</span>).over(w), <span class="nu">2</span>)
+)
+df.select(<span class="st">"emp_id"</span>, <span class="st">"month"</span>, <span class="st">"revenue"</span>, <span class="st">"moving_avg_3m"</span>).show()</pre></div></div></div>
+
+        <div class="qi" onclick="toggleQ(this)"><span class="qn">05</span><span class="qt">Cumulative revenue % of total per employee.</span><span class="qarrow">▶</span>
+        <div class="qa"><div class="qa-inner"><div class="qa-head">💡 Solution</div><pre">w_cum = Window.partitionBy(<span class="st">"emp_id"</span>).orderBy(<span class="st">"month"</span>) \
+    .rowsBetween(Window.unboundedPreceding, Window.currentRow)
+
+w_total = Window.partitionBy(<span class="st">"emp_id"</span>)
+
+df = ms_df \
+    .withColumn(<span class="st">"cum_rev"</span>,   F.sum(<span class="st">"revenue"</span>).over(w_cum)) \
+    .withColumn(<span class="st">"total_rev"</span>, F.sum(<span class="st">"revenue"</span>).over(w_total)) \
+    .withColumn(<span class="st">"cum_pct"</span>,
+        F.round(F.col(<span class="st">"cum_rev"</span>) * <span class="nu">100</span> / F.col(<span class="st">"total_rev"</span>), <span class="nu">2</span>))
+
+df.select(<span class="st">"emp_id"</span>, <span class="st">"month"</span>, <span class="st">"revenue"</span>,
+          <span class="st">"cum_rev"</span>, <span class="st">"cum_pct"</span>).show()</pre></div></div></div>
+
+        <div class="qi" onclick="toggleQ(this)"><span class="qn">06</span><span class="qt">Find months where revenue dropped vs previous month.</span><span class="qarrow">▶</span>
+        <div class="qa"><div class="qa-inner"><div class="qa-head">💡 Solution</div><pre">w = Window.partitionBy(<span class="st">"emp_id"</span>).orderBy(<span class="st">"month"</span>)
+
+df = ms_df \
+    .withColumn(<span class="st">"prev_rev"</span>, F.lag(<span class="st">"revenue"</span>, <span class="nu">1</span>).over(w)) \
+    .filter(
+        F.col(<span class="st">"prev_rev"</span>).isNotNull() &
+        (F.col(<span class="st">"revenue"</span>) < F.col(<span class="st">"prev_rev"</span>))
+    )
+
+df.select(<span class="st">"emp_id"</span>, <span class="st">"month"</span>, <span class="st">"revenue"</span>, <span class="st">"prev_rev"</span>).show()</pre></div></div></div>
+
+        <div class="qi" onclick="toggleQ(this)"><span class="qn">07</span><span class="qt">PERCENT_RANK: Find percentile rank of each student's score.</span><span class="qarrow">▶</span>
+        <div class="qa"><div class="qa-inner"><div class="qa-head">💡 Solution</div><pre">w = Window.partitionBy(<span class="st">"subject"</span>).orderBy(<span class="st">"score"</span>)
+
+scores_df \
+    .withColumn(<span class="st">"pct_rank"</span>,
+                F.percent_rank().over(w)) \
+    .withColumn(<span class="st">"cume_dist"</span>,
+                F.cume_dist().over(w)) \
+    .orderBy(<span class="st">"subject"</span>, F.col(<span class="st">"score"</span>).desc()) \
+    .show()</pre></div></div></div>
+
+        <div class="qi" onclick="toggleQ(this)"><span class="qn">08</span><span class="qt">Show best month (max revenue month) for each employee using FIRST_VALUE.</span><span class="qarrow">▶</span>
+        <div class="qa"><div class="qa-inner"><div class="qa-head">💡 Solution</div><pre">w = Window.partitionBy(<span class="st">"emp_id"</span>) \
+    .orderBy(F.col(<span class="st">"revenue"</span>).desc()) \
+    .rowsBetween(Window.unboundedPreceding, Window.unboundedFollowing)
+
+df = ms_df \
+    .withColumn(<span class="st">"best_month"</span>,  F.first(<span class="st">"month"</span>).over(w)) \
+    .withColumn(<span class="st">"best_revenue"</span>, F.first(<span class="st">"revenue"</span>).over(w))
+
+df.select(<span class="st">"emp_id"</span>, <span class="st">"month"</span>, <span class="st">"revenue"</span>,
+          <span class="st">"best_month"</span>, <span class="st">"best_revenue"</span>) \
+  .dropDuplicates([<span class="st">"emp_id"</span>]).show()</pre></div></div></div>
+
+        <div class="qi" onclick="toggleQ(this)"><span class="qn">09</span><span class="qt">Find employees with 2+ consecutive months of increasing revenue.</span><span class="qarrow">▶</span>
+        <div class="qa"><div class="qa-inner"><div class="qa-head">💡 Solution</div><pre">w = Window.partitionBy(<span class="st">"emp_id"</span>).orderBy(<span class="st">"month"</span>)
+
+df = ms_df \
+    .withColumn(<span class="st">"prev1"</span>, F.lag(<span class="st">"revenue"</span>, <span class="nu">1</span>).over(w)) \
+    .withColumn(<span class="st">"prev2"</span>, F.lag(<span class="st">"revenue"</span>, <span class="nu">2</span>).over(w)) \
+    .filter(
+        F.col(<span class="st">"prev1"</span>).isNotNull() &
+        F.col(<span class="st">"prev2"</span>).isNotNull() &
+        (F.col(<span class="st">"revenue"</span>) > F.col(<span class="st">"prev1"</span>)) &
+        (F.col(<span class="st">"prev1"</span>) > F.col(<span class="st">"prev2"</span>))
+    )
+
+df.select(<span class="st">"emp_id"</span>, <span class="st">"month"</span>, <span class="st">"prev2"</span>, <span class="st">"prev1"</span>, <span class="st">"revenue"</span>).show()</pre></div></div></div>
+
+        <div class="qi" onclick="toggleQ(this)"><span class="qn">10</span><span class="qt">Z-score per employee: (revenue - avg) / stddev within region.</span><span class="qarrow">▶</span>
+        <div class="qa"><div class="qa-inner"><div class="qa-head">💡 Solution</div><pre">w = Window.partitionBy(<span class="st">"region"</span>)
+
+df = ms_df \
+    .withColumn(<span class="st">"region_avg"</span>, F.avg(<span class="st">"revenue"</span>).over(w)) \
+    .withColumn(<span class="st">"region_std"</span>, F.stddev(<span class="st">"revenue"</span>).over(w)) \
+    .withColumn(<span class="st">"z_score"</span>,
+        F.round(
+            (F.col(<span class="st">"revenue"</span>) - F.col(<span class="st">"region_avg"</span>)) /
+            F.col(<span class="st">"region_std"</span>),
+        <span class="nu">2</span>)
+    )
+
+df.select(<span class="st">"region"</span>, <span class="st">"emp_id"</span>, <span class="st">"month"</span>,
+          <span class="st">"revenue"</span>, <span class="st">"z_score"</span>).show()</pre></div></div></div>
+
+      </div>
+    </div>
+
+    <!-- HARD + INTERVIEW -->
+    <div class="qblock hard">
+      <div class="qblock-head"><span class="lvl">HARD</span><span class="qcount">5 Questions</span></div>
+      <div class="qlist">
+
+        <div class="qi" onclick="toggleQ(this)"><span class="qn">01</span><span class="qt">Islands problem: Group consecutive months with revenue > 15000.</span><span class="qarrow">▶</span>
+        <div class="qa"><div class="qa-inner"><div class="qa-head">💡 Solution</div><pre">w = Window.partitionBy(<span class="st">"emp_id"</span>).orderBy(<span class="st">"month"</span>)
+
+df = ms_df \
+    .withColumn(<span class="st">"is_high"</span>,
+                F.when(F.col(<span class="st">"revenue"</span>) > <span class="nu">15000</span>, <span class="nu">1</span>).otherwise(<span class="nu">0</span>)) \
+    .withColumn(<span class="st">"rn"</span>, F.row_number().over(w)) \
+    .withColumn(<span class="st">"grp_rn"</span>,
+        F.row_number().over(
+            Window.partitionBy(<span class="st">"emp_id"</span>, <span class="st">"is_high"</span>).orderBy(<span class="st">"month"</span>)
+        )
+    ) \
+    .withColumn(<span class="st">"island_id"</span>, F.col(<span class="st">"rn"</span>) - F.col(<span class="st">"grp_rn"</span>))
+
+<span class="cm"># Group islands</span>
+df.filter(F.col(<span class="st">"is_high"</span>) == <span class="nu">1</span>) \
+  .groupBy(<span class="st">"emp_id"</span>, <span class="st">"is_high"</span>, <span class="st">"island_id"</span>) \
+  .agg(
+      F.min(<span class="st">"month"</span>).alias(<span class="st">"start"</span>),
+      F.max(<span class="st">"month"</span>).alias(<span class="st">"end"</span>),
+      F.count(<span class="st">"*"</span>).alias(<span class="st">"months"</span>)
+  ).show()</pre></div></div></div>
+
+        <div class="qi" onclick="toggleQ(this)"><span class="qn">02</span><span class="qt">Retention: Find employees active in Jan AND Feb using window.</span><span class="qarrow">▶</span>
+        <div class="qa"><div class="qa-inner"><div class="qa-head">💡 Solution</div><pre">w = Window.partitionBy(<span class="st">"emp_id"</span>)
+
+df = ms_df \
+    .withColumn(<span class="st">"has_jan"</span>,
+        F.max(F.when(F.col(<span class="st">"month"</span>) == <span class="st">"2024-01"</span>, <span class="nu">1</span>).otherwise(<span class="nu">0</span>)).over(w)) \
+    .withColumn(<span class="st">"has_feb"</span>,
+        F.max(F.when(F.col(<span class="st">"month"</span>) == <span class="st">"2024-02"</span>, <span class="nu">1</span>).otherwise(<span class="nu">0</span>)).over(w)) \
+    .filter(
+        (F.col(<span class="st">"has_jan"</span>) == <span class="nu">1</span>) &
+        (F.col(<span class="st">"has_feb"</span>) == <span class="nu">1</span>)
+    ) \
+    .select(<span class="st">"emp_id"</span>).distinct()
+
+df.show()  <span class="cm"># Retained employees (active both months)</span></pre></div></div></div>
+
+        <div class="qi" onclick="toggleQ(this)"><span class="qn">03</span><span class="qt">Median revenue per region (no built-in median in Spark).</span><span class="qarrow">▶</span>
+        <div class="qa"><div class="qa-inner"><div class="qa-head">💡 Solution</div><pre">w = Window.partitionBy(<span class="st">"region"</span>).orderBy(<span class="st">"revenue"</span>) \
+    .rowsBetween(Window.unboundedPreceding, Window.unboundedFollowing)
+
+df = ms_df \
+    .withColumn(<span class="st">"rn"</span>,    F.row_number().over(
+        Window.partitionBy(<span class="st">"region"</span>).orderBy(<span class="st">"revenue"</span>))) \
+    .withColumn(<span class="st">"total"</span>, F.count(<span class="st">"*"</span>).over(Window.partitionBy(<span class="st">"region"</span>)))
+
+median_df = df.filter(
+    F.col(<span class="st">"rn"</span>).isin([
+        F.floor((F.col(<span class="st">"total"</span>)+<span class="nu">1</span>)/<span class="nu">2</span>),
+        F.ceil((F.col(<span class="st">"total"</span>)+<span class="nu">1</span>)/<span class="nu">2</span>)
+    ])
+).groupBy(<span class="st">"region"</span>).agg(F.avg(<span class="st">"revenue"</span>).alias(<span class="st">"median_revenue"</span>))
+
+median_df.show()</pre></div></div></div>
+
+        <div class="qi" onclick="toggleQ(this)"><span class="qn">04</span><span class="qt">Gap detection: Find missing months in employee's sales history.</span><span class="qarrow">▶</span>
+        <div class="qa"><div class="qa-inner"><div class="qa-head">💡 Solution</div><pre">w = Window.partitionBy(<span class="st">"emp_id"</span>).orderBy(<span class="st">"month"</span>)
+
+df = ms_df \
+    .withColumn(<span class="st">"next_month"</span>, F.lead(<span class="st">"month"</span>, <span class="nu">1</span>).over(w)) \
+    .withColumn(<span class="st">"month_num"</span>,
+        F.regexp_extract(<span class="st">"month"</span>, <span class="st">r'\d{4}-(\d{2})'</span>, <span class="nu">1</span>).cast(<span class="st">"int"</span>)) \
+    .withColumn(<span class="st">"next_month_num"</span>,
+        F.regexp_extract(F.col(<span class="st">"next_month"</span>), <span class="st">r'\d{4}-(\d{2})'</span>, <span class="nu">1</span>).cast(<span class="st">"int"</span>)) \
+    .withColumn(<span class="st">"gap"</span>,
+        F.col(<span class="st">"next_month_num"</span>) - F.col(<span class="st">"month_num"</span>) - <span class="nu">1</span>) \
+    .filter(F.col(<span class="st">"gap"</span>) > <span class="nu">0</span>)
+
+df.select(<span class="st">"emp_id"</span>, <span class="st">"month"</span>, <span class="st">"next_month"</span>, <span class="st">"gap"</span>).show()
+<span class="cm"># Shows where gaps exist between consecutive months</span></pre></div></div></div>
+
+        <div class="qi" onclick="toggleQ(this)"><span class="qn">05</span><span class="qt">Full analytics pipeline: Revenue report with rank, MoM, running total, z-score.</span><span class="qarrow">▶</span>
+        <div class="qa"><div class="qa-inner"><div class="qa-head">💡 Solution</div><pre"><span class="cm"># Window specs</span>
+w_emp   = Window.partitionBy(<span class="st">"emp_id"</span>).orderBy(<span class="st">"month"</span>)
+w_reg   = Window.partitionBy(<span class="st">"region"</span>)
+w_month = Window.partitionBy(<span class="st">"month"</span>).orderBy(F.col(<span class="st">"revenue"</span>).desc())
+w_cum   = Window.partitionBy(<span class="st">"emp_id"</span>).orderBy(<span class="st">"month"</span>) \
+    .rowsBetween(Window.unboundedPreceding, Window.currentRow)
+
+result = ms_df \
+    .withColumn(<span class="st">"prev_rev"</span>,     F.lag(<span class="st">"revenue"</span>, <span class="nu">1</span>).over(w_emp)) \
+    .withColumn(<span class="st">"mom_pct"</span>,
+        F.round((F.col(<span class="st">"revenue"</span>)-F.col(<span class="st">"prev_rev"</span>))*<span class="nu">100</span>/
+                F.col(<span class="st">"prev_rev"</span>), <span class="nu">2</span>)) \
+    .withColumn(<span class="st">"running_total"</span>, F.sum(<span class="st">"revenue"</span>).over(w_cum)) \
+    .withColumn(<span class="st">"region_avg"</span>,   F.avg(<span class="st">"revenue"</span>).over(w_reg)) \
+    .withColumn(<span class="st">"region_std"</span>,   F.stddev(<span class="st">"revenue"</span>).over(w_reg)) \
+    .withColumn(<span class="st">"z_score"</span>,
+        F.round((F.col(<span class="st">"revenue"</span>)-F.col(<span class="st">"region_avg"</span>)) /
+                F.col(<span class="st">"region_std"</span>), <span class="nu">2</span>)) \
+    .withColumn(<span class="st">"month_rank"</span>, F.dense_rank().over(w_month))
+
+result.select(
+    <span class="st">"emp_id"</span>, <span class="st">"month"</span>, <span class="st">"revenue"</span>, <span class="st">"mom_pct"</span>,
+    <span class="st">"running_total"</span>, <span class="st">"z_score"</span>, <span class="st">"month_rank"</span>
+).orderBy(<span class="st">"emp_id"</span>, <span class="st">"month"</span>).show()</pre></div></div></div>
+
+      </div>
+    </div>
+
+    <div class="qblock interview">
+      <div class="qblock-head"><span class="lvl">INTERVIEW</span><span class="qcount">5 Questions</span></div>
+      <div class="qlist">
+
+        <div class="qi" onclick="toggleQ(this)"><span class="qn">01</span><span class="qt">RANK vs DENSE_RANK vs ROW_NUMBER — key differences with example.</span><span class="qarrow">▶</span>
+        <div class="qa"><div class="qa-inner"><div class="qa-head">💡 Solution</div><pre">w = Window.orderBy(F.col(<span class="st">"score"</span>).desc())
+
+scores_df.filter(F.col(<span class="st">"subject"</span>)==<span class="st">"Math"</span>) \
+    .withColumn(<span class="st">"ROW_NUMBER"</span>, F.row_number().over(w)) \
+    .withColumn(<span class="st">"RANK"</span>,       F.rank().over(w)) \
+    .withColumn(<span class="st">"DENSE_RANK"</span>, F.dense_rank().over(w)) \
+    .select(<span class="st">"name"</span>,<span class="st">"score"</span>,<span class="st">"ROW_NUMBER"</span>,<span class="st">"RANK"</span>,<span class="st">"DENSE_RANK"</span>) \
+    .show()
+<span class="cm"># score=95: RN=1, RANK=1, DR=1
+# score=92: RN=2, RANK=2, DR=2
+# score=85: RN=3, RANK=3, DR=3  ← both 85
+# score=85: RN=4, RANK=3, DR=3
+# ROW_NUMBER: always unique (1,2,3,4)
+# RANK:       gaps after ties (1,2,3,3, NEXT=5)
+# DENSE_RANK: no gaps (1,2,3,3,4)
+# Use: ROW_NUMBER=dedup, RANK=sports, DENSE_RANK=grades</span></pre></div></div></div>
+
+        <div class="qi" onclick="toggleQ(this)"><span class="qn">02</span><span class="qt">Why can't window functions be used in filter()? How to work around it?</span><span class="qarrow">▶</span>
+        <div class="qa"><div class="qa-inner"><div class="qa-head">💡 Solution</div><pre"><span class="cm"># Window functions execute AFTER filter in plan
+# So this FAILS:</span>
+w = Window.orderBy(F.col(<span class="st">"salary"</span>).desc())
+<span class="cm"># emp_df.filter(F.row_number().over(w) == 1)  # ERROR!
+
+# WORKAROUND 1: withColumn then filter</span>
+df = emp_df.withColumn(<span class="st">"rn"</span>, F.row_number().over(w))
+result = df.filter(F.col(<span class="st">"rn"</span>) == <span class="nu">1</span>).drop(<span class="st">"rn"</span>)
+result.show()
+
+<span class="cm"># WORKAROUND 2: Create temp view + SQL</span>
+emp_df.createOrReplaceTempView(<span class="st">"emp"</span>)
+spark.sql(<span class="st">"""
+    SELECT * FROM (
+        SELECT *, ROW_NUMBER() OVER (ORDER BY salary DESC) rn FROM emp
+    ) WHERE rn = 1
+"""</span>).show()</pre></div></div></div>
+
+        <div class="qi" onclick="toggleQ(this)"><span class="qn">03</span><span class="qt">ROWS BETWEEN vs RANGE BETWEEN — explain with example.</span><span class="qarrow">▶</span>
+        <div class="qa"><div class="qa-inner"><div class="qa-head">💡 Solution</div><pre"><span class="cm"># ROWS BETWEEN: physical row count (position-based)</span>
+w_rows = Window.partitionBy(<span class="st">"emp_id"</span>).orderBy(<span class="st">"month"</span>) \
+    .rowsBetween(-<span class="nu">2</span>, Window.currentRow)  <span class="cm"># always 3 rows max</span>
+
+<span class="cm"># RANGE BETWEEN: value-based range (logical)</span>
+w_range = Window.partitionBy(<span class="st">"emp_id"</span>).orderBy(<span class="st">"revenue"</span>) \
+    .rangeBetween(-<span class="nu">5000</span>, Window.currentRow)  <span class="cm"># rows within ±5000</span>
+
+df = ms_df \
+    .withColumn(<span class="st">"rows_avg"</span>,  F.avg(<span class="st">"revenue"</span>).over(w_rows)) \
+    .withColumn(<span class="st">"range_avg"</span>, F.avg(<span class="st">"revenue"</span>).over(w_range))
+
+df.select(<span class="st">"emp_id"</span>,<span class="st">"month"</span>,<span class="st">"revenue"</span>,<span class="st">"rows_avg"</span>,<span class="st">"range_avg"</span>).show()
+
+<span class="cm"># Key difference:
+# ROWS: "previous 2 physical rows" — always same count
+# RANGE: "rows where value is within range" — count varies
+# Use ROWS for time-series windows (n previous periods)
+# Use RANGE for value-based windows (price range, score range)</span></pre></div></div></div>
+
+        <div class="qi" onclick="toggleQ(this)"><span class="qn">04</span><span class="qt">How to handle performance issues with window functions on large data?</span><span class="qarrow">▶</span>
+        <div class="qa"><div class="qa-inner"><div class="qa-head">💡 Solution</div><pre"><span class="cm"># Window functions cause SHUFFLE (wide transformation)
+# Performance tips:
+
+# 1. Always use PARTITION BY — limits shuffle to partition
+# BAD: Window.orderBy("salary")  ← full data sort!
+# GOOD: Window.partitionBy("dept").orderBy("salary")
+
+# 2. Filter BEFORE window — reduce data first</span>
+filtered = ms_df.filter(F.col(<span class="st">"revenue"</span>) > <span class="nu">5000</span>)
+w = Window.partitionBy(<span class="st">"emp_id"</span>).orderBy(<span class="st">"month"</span>)
+filtered.withColumn(<span class="st">"rn"</span>, F.row_number().over(w)).show()
+
+<span class="cm"># 3. Avoid multiple window specs with same partition — combine</span>
+w = Window.partitionBy(<span class="st">"emp_id"</span>).orderBy(<span class="st">"month"</span>)
+df = ms_df \
+    .withColumn(<span class="st">"rn"</span>,   F.row_number().over(w)) \
+    .withColumn(<span class="st">"lag1"</span>, F.lag(<span class="st">"revenue"</span>,<span class="nu">1</span>).over(w)) \
+    .withColumn(<span class="st">"cum"</span>,  F.sum(<span class="st">"revenue"</span>).over(w))
+<span class="cm"># 3 window ops with SAME spec = 1 shuffle (optimized!)
+
+# 4. Enable AQE</span>
+spark.conf.set(<span class="st">"spark.sql.adaptive.enabled"</span>, <span class="st">"true"</span>)
+
+<span class="cm"># 5. Check explain() for SortAggregate vs HashAggregate</span>
+df.explain(<span class="st">"formatted"</span>)</pre></div></div></div>
+
+        <div class="qi" onclick="toggleQ(this)"><span class="qn">05</span><span class="qt">Real DE: SCD Type 2 — track historical changes using window functions.</span><span class="qarrow">▶</span>
+        <div class="qa"><div class="qa-inner"><div class="qa-head">💡 Solution</div><pre"><span class="cm"># SCD Type 2: Keep history of all changes with effective dates</span>
+changes = spark.createDataFrame([
+    (<span class="nu">1</span>, <span class="st">"Rahul"</span>, <span class="st">"Engineering"</span>, <span class="nu">85000</span>, <span class="st">"2020-01-01"</span>),
+    (<span class="nu">1</span>, <span class="st">"Rahul"</span>, <span class="st">"Engineering"</span>, <span class="nu">90000</span>, <span class="st">"2022-06-01"</span>),
+    (<span class="nu">1</span>, <span class="st">"Rahul"</span>, <span class="st">"Finance"</span>,     <span class="nu">95000</span>, <span class="st">"2024-01-01"</span>),
+    (<span class="nu">2</span>, <span class="st">"Priya"</span>, <span class="st">"Marketing"</span>,   <span class="nu">62000</span>, <span class="st">"2019-03-01"</span>),
+    (<span class="nu">2</span>, <span class="st">"Priya"</span>, <span class="st">"Marketing"</span>,   <span class="nu">70000</span>, <span class="st">"2023-01-01"</span>),
+], [<span class="st">"emp_id"</span>, <span class="st">"name"</span>, <span class="st">"dept"</span>, <span class="st">"salary"</span>, <span class="st">"effective_from"</span>])
+
+w = Window.partitionBy(<span class="st">"emp_id"</span>).orderBy(<span class="st">"effective_from"</span>)
+
+scd2 = changes \
+    .withColumn(<span class="st">"effective_to"</span>,
+        F.lead(<span class="st">"effective_from"</span>, <span class="nu">1</span>).over(w)) \
+    .withColumn(<span class="st">"effective_to"</span>,
+        F.coalesce(F.col(<span class="st">"effective_to"</span>),
+                   F.lit(<span class="st">"9999-12-31"</span>))) \
+    .withColumn(<span class="st">"is_current"</span>,
+        F.when(F.col(<span class="st">"effective_to"</span>) == <span class="st">"9999-12-31"</span>, <span class="kw">True</span>)
+         .otherwise(<span class="kw">False</span>))
+
+scd2.show(truncate=<span class="kw">False</span>)</pre></div></div></div>
+
+      </div>
+    </div>
+
+  </div>
+</div>
+<!-- END WINDOW -->
+
+</div><!-- container -->
+
+<footer>⚡ PySpark Day 3 — Joins &amp; Window Functions · 40 Questions · Data Engineer Interview Prep</footer>
+
+<script>
+  function showDay(id, btn) {
+    document.querySelectorAll('.day-panel').forEach(p => p.classList.remove('active'));
+    document.querySelectorAll('.nav-tab').forEach(b => b.classList.remove('active'));
+    document.getElementById(id).classList.add('active');
+    btn.classList.add('active');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+  function toggleQ(el) {
+    const wasOpen = el.classList.contains('open');
+    el.closest('.qlist').querySelectorAll('.qi.open').forEach(q => q.classList.remove('open'));
+    if (!wasOpen) el.classList.add('open');
+  }
+</script>
+</body>
+</html>
