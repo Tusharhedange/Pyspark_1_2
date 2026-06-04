@@ -1,0 +1,450 @@
+
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+.container{padding:1rem 0}
+.badge{font-size:11px;padding:3px 10px;border-radius:20px;font-weight:500;background:var(--color-background-info);color:var(--color-text-info)}
+.tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:1.25rem}
+.tab{font-size:13px;padding:6px 14px;border-radius:20px;border:0.5px solid var(--color-border-secondary);background:transparent;cursor:pointer;color:var(--color-text-secondary);transition:all .15s}
+.tab.active{background:var(--color-text-primary);color:var(--color-background-primary);border-color:var(--color-text-primary)}
+.schema-section{background:var(--color-background-secondary);border-radius:var(--border-radius-lg);padding:1rem 1.25rem;margin-bottom:1.25rem;border:0.5px solid var(--color-border-tertiary)}
+.schema-label{font-size:11px;color:var(--color-text-secondary);font-weight:500;letter-spacing:.04em;margin-bottom:10px}
+.schema-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px}
+.schema-table{font-size:12px;font-family:var(--font-mono)}
+.schema-table-name{font-size:11px;font-weight:500;color:var(--color-text-secondary);margin-bottom:6px}
+.dt{width:100%;border-collapse:collapse}
+.dt th{text-align:left;padding:4px 8px;background:var(--color-background-primary);border-bottom:0.5px solid var(--color-border-secondary);color:var(--color-text-secondary);font-weight:500;font-size:11px}
+.dt td{padding:4px 8px;border-bottom:0.5px solid var(--color-border-tertiary);color:var(--color-text-primary);font-size:12px}
+.dt tr:last-child td{border-bottom:none}
+.ddl-toggle{font-size:11px;padding:3px 10px;border-radius:20px;border:0.5px solid var(--color-border-secondary);background:transparent;cursor:pointer;color:var(--color-text-secondary);margin-top:8px}
+.ddl-block{font-family:var(--font-mono);font-size:11px;background:var(--color-background-primary);border-radius:var(--border-radius-md);padding:10px 12px;margin-top:8px;display:none;border:0.5px solid var(--color-border-tertiary);white-space:pre;overflow-x:auto;color:var(--color-text-primary);line-height:1.6}
+.q-card{background:var(--color-background-primary);border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-lg);padding:1rem 1.25rem;margin-bottom:10px}
+.q-num{font-size:11px;color:var(--color-text-secondary);margin-bottom:6px;font-weight:500}
+.q-text{font-size:14px;color:var(--color-text-primary);margin-bottom:10px;line-height:1.6}
+.cat-tag{font-size:11px;padding:2px 8px;border-radius:4px;background:var(--color-background-warning);color:var(--color-text-warning);font-weight:500;margin-left:8px}
+.hint-btn{font-size:12px;padding:5px 12px;border-radius:20px;border:0.5px solid var(--color-border-secondary);background:transparent;cursor:pointer;color:var(--color-text-secondary)}
+.ans-btn{font-size:12px;padding:5px 12px;border-radius:20px;border:0.5px solid var(--color-border-secondary);background:transparent;cursor:pointer;color:var(--color-text-info);margin-left:6px}
+.dive-btn{font-size:12px;padding:5px 12px;border-radius:20px;border:0.5px solid var(--color-border-secondary);background:transparent;cursor:pointer;color:var(--color-text-secondary);margin-left:6px}
+.hint-text{font-size:12px;color:var(--color-text-secondary);margin-top:8px;padding:8px 12px;background:var(--color-background-secondary);border-radius:var(--border-radius-md);border-left:2px solid var(--color-border-info);display:none;line-height:1.6}
+.ans-block{font-family:var(--font-mono);font-size:12px;background:var(--color-background-secondary);border-radius:var(--border-radius-md);padding:10px 12px;margin-top:8px;display:none;border:0.5px solid var(--color-border-tertiary);white-space:pre;overflow-x:auto;color:var(--color-text-primary);line-height:1.6}
+.progress-bar{height:4px;background:var(--color-border-tertiary);border-radius:2px;margin-bottom:1.25rem;overflow:hidden}
+.progress-fill{height:100%;background:var(--color-text-info);border-radius:2px;transition:width .3s}
+</style>
+<div class="container">
+<h2 class="sr-only">SQL Interview Questions for Azure Data Engineers — Practice Tool</h2>
+<div style="display:flex;align-items:center;gap:12px;margin-bottom:1.5rem;flex-wrap:wrap">
+  <span style="font-size:16px;font-weight:500;color:var(--color-text-primary)">SQL Interview Prep</span>
+  <span class="badge">Azure Data Engineer</span>
+</div>
+
+<div class="schema-section">
+  <div class="schema-label">SAMPLE TABLES (data used across all questions)</div>
+  <div class="schema-grid">
+    <div class="schema-table">
+      <div class="schema-table-name">employees</div>
+      <table class="dt">
+        <tr><th>emp_id</th><th>name</th><th>dept_id</th><th>salary</th><th>manager_id</th><th>join_date</th></tr>
+        <tr><td>1</td><td>Rohit</td><td>10</td><td>60000</td><td>NULL</td><td>2020-01-15</td></tr>
+        <tr><td>2</td><td>Priya</td><td>20</td><td>45000</td><td>1</td><td>2021-03-10</td></tr>
+        <tr><td>3</td><td>Amit</td><td>10</td><td>70000</td><td>1</td><td>2019-07-01</td></tr>
+        <tr><td>4</td><td>Neha</td><td>10</td><td>60000</td><td>1</td><td>2022-06-20</td></tr>
+        <tr><td>5</td><td>Karan</td><td>20</td><td>55000</td><td>2</td><td>2021-11-05</td></tr>
+        <tr><td>6</td><td>Sara</td><td>30</td><td>80000</td><td>NULL</td><td>2018-04-12</td></tr>
+      </table>
+    </div>
+    <div class="schema-table">
+      <div class="schema-table-name">departments</div>
+      <table class="dt">
+        <tr><th>dept_id</th><th>dept_name</th><th>location</th></tr>
+        <tr><td>10</td><td>IT</td><td>Mumbai</td></tr>
+        <tr><td>20</td><td>HR</td><td>Delhi</td></tr>
+        <tr><td>30</td><td>Finance</td><td>Bangalore</td></tr>
+        <tr><td>40</td><td>Marketing</td><td>Pune</td></tr>
+      </table>
+      <div class="schema-table-name" style="margin-top:12px">orders</div>
+      <table class="dt">
+        <tr><th>order_id</th><th>emp_id</th><th>amount</th><th>order_date</th><th>status</th></tr>
+        <tr><td>101</td><td>1</td><td>5000</td><td>2024-01-05</td><td>Completed</td></tr>
+        <tr><td>102</td><td>2</td><td>3000</td><td>2024-01-10</td><td>Pending</td></tr>
+        <tr><td>103</td><td>1</td><td>7000</td><td>2024-02-01</td><td>Completed</td></tr>
+        <tr><td>104</td><td>3</td><td>2000</td><td>2024-02-15</td><td>Cancelled</td></tr>
+        <tr><td>105</td><td>1</td><td>9000</td><td>2024-03-01</td><td>Completed</td></tr>
+        <tr><td>106</td><td>99</td><td>1000</td><td>2024-03-05</td><td>Pending</td></tr>
+      </table>
+    </div>
+  </div>
+  <button class="ddl-toggle" onclick="toggleDDL()">Show CREATE + INSERT statements</button>
+  <div class="ddl-block" id="ddl-block">CREATE TABLE employees (
+  emp_id     INT PRIMARY KEY,
+  name       VARCHAR(50),
+  dept_id    INT,
+  salary     INT,
+  manager_id INT,
+  join_date  DATE
+);
+
+INSERT INTO employees VALUES
+(1,'Rohit',10,60000,NULL,'2020-01-15'),
+(2,'Priya',20,45000,1,'2021-03-10'),
+(3,'Amit',10,70000,1,'2019-07-01'),
+(4,'Neha',10,60000,1,'2022-06-20'),
+(5,'Karan',20,55000,2,'2021-11-05'),
+(6,'Sara',30,80000,NULL,'2018-04-12');
+
+CREATE TABLE departments (
+  dept_id   INT PRIMARY KEY,
+  dept_name VARCHAR(50),
+  location  VARCHAR(50)
+);
+
+INSERT INTO departments VALUES
+(10,'IT','Mumbai'),
+(20,'HR','Delhi'),
+(30,'Finance','Bangalore'),
+(40,'Marketing','Pune');
+
+CREATE TABLE orders (
+  order_id   INT PRIMARY KEY,
+  emp_id     INT,
+  amount     INT,
+  order_date DATE,
+  status     VARCHAR(20)
+);
+
+INSERT INTO orders VALUES
+(101,1,5000,'2024-01-05','Completed'),
+(102,2,3000,'2024-01-10','Pending'),
+(103,1,7000,'2024-02-01','Completed'),
+(104,3,2000,'2024-02-15','Cancelled'),
+(105,1,9000,'2024-03-01','Completed'),
+(106,99,1000,'2024-03-05','Pending');</div>
+</div>
+
+<div class="tabs">
+  <button class="tab active" onclick="showCat(0)">Joins</button>
+  <button class="tab" onclick="showCat(1)">Window Fn</button>
+  <button class="tab" onclick="showCat(2)">GroupBy/Having</button>
+  <button class="tab" onclick="showCat(3)">Subqueries/CTE</button>
+  <button class="tab" onclick="showCat(4)">String/Date</button>
+  <button class="tab" onclick="showCat(5)">Advanced</button>
+</div>
+
+<div class="progress-bar"><div class="progress-fill" id="prog" style="width:0%"></div></div>
+<div id="q-container"></div>
+</div>
+
+<script>
+const cats=[
+  {
+    cat:"Joins",
+    qs:[
+      {
+        q:"List all departments along with the number of employees in each. Departments with zero employees should also appear.",
+        hint:"Use LEFT JOIN from departments to employees so empty departments (like Marketing) are included. COUNT(emp_id) correctly returns 0 for no match.",
+        ans:`SELECT d.dept_name, COUNT(e.emp_id) AS total_employees
+FROM departments d
+LEFT JOIN employees e ON d.dept_id = e.dept_id
+GROUP BY d.dept_name
+ORDER BY total_employees DESC;`
+      },
+      {
+        q:"Show the names of employees who have NOT placed any order. (emp_id=99 in orders does not exist in employees.)",
+        hint:"Two approaches work: LEFT JOIN with WHERE orders.emp_id IS NULL, or NOT IN subquery, or NOT EXISTS. LEFT JOIN approach is most efficient.",
+        ans:`SELECT e.emp_id, e.name
+FROM employees e
+LEFT JOIN orders o ON e.emp_id = o.emp_id
+WHERE o.order_id IS NULL;`
+      },
+      {
+        q:"For each employee, show their name and their manager's name. Employees with no manager should still appear.",
+        hint:"Self join — join employees table with itself. Use aliases e (employee) and m (manager). LEFT JOIN so NULL manager_id rows are included.",
+        ans:`SELECT e.name AS employee,
+       m.name AS manager
+FROM employees e
+LEFT JOIN employees m ON e.manager_id = m.emp_id;`
+      },
+      {
+        q:"Show all employees with their department name and total orders placed. Include employees from departments not in the departments table and orders from unknown emp_ids.",
+        hint:"This needs a FULL OUTER JOIN between employees and departments, plus a LEFT JOIN to orders. Think about what data you might lose with INNER JOIN.",
+        ans:`SELECT e.name, d.dept_name,
+       COUNT(o.order_id) AS total_orders
+FROM employees e
+LEFT JOIN departments d ON e.dept_id = d.dept_id
+LEFT JOIN orders o ON e.emp_id = o.emp_id
+GROUP BY e.name, d.dept_name;`
+      }
+    ]
+  },
+  {
+    cat:"Window Fn",
+    qs:[
+      {
+        q:"Rank employees within each department by salary (highest first). If two employees have the same salary, they should get the same rank and the next rank should be skipped.",
+        hint:"Use RANK() with PARTITION BY dept_id ORDER BY salary DESC. RANK() skips numbers on ties; DENSE_RANK() does not — know the difference.",
+        ans:`SELECT name, dept_id, salary,
+       RANK() OVER (
+         PARTITION BY dept_id
+         ORDER BY salary DESC
+       ) AS salary_rank
+FROM employees;`
+      },
+      {
+        q:"Find the top 2 highest paid employees in each department.",
+        hint:"Use DENSE_RANK() inside a CTE or subquery, then filter WHERE rank <= 2 in the outer query. You cannot use WHERE on window functions directly.",
+        ans:`WITH ranked AS (
+  SELECT name, dept_id, salary,
+         DENSE_RANK() OVER (
+           PARTITION BY dept_id
+           ORDER BY salary DESC
+         ) AS rnk
+  FROM employees
+)
+SELECT name, dept_id, salary
+FROM ranked
+WHERE rnk <= 2;`
+      },
+      {
+        q:"For each order, show the previous order's amount placed by the same employee (ordered by order_date).",
+        hint:"Use LAG(amount, 1) OVER (PARTITION BY emp_id ORDER BY order_date). The first order per employee will show NULL.",
+        ans:`SELECT order_id, emp_id, amount, order_date,
+       LAG(amount, 1) OVER (
+         PARTITION BY emp_id
+         ORDER BY order_date
+       ) AS prev_order_amount
+FROM orders;`
+      },
+      {
+        q:"Calculate a running total of order amounts per employee ordered by order_date.",
+        hint:"Use SUM() as a window function with ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW.",
+        ans:`SELECT order_id, emp_id, amount, order_date,
+       SUM(amount) OVER (
+         PARTITION BY emp_id
+         ORDER BY order_date
+         ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW
+       ) AS running_total
+FROM orders;`
+      }
+    ]
+  },
+  {
+    cat:"GroupBy/Having",
+    qs:[
+      {
+        q:"Find all departments where the average salary is greater than 55000. Show dept_id and average salary.",
+        hint:"GROUP BY dept_id, then use HAVING — not WHERE — to filter on the aggregated average. WHERE runs before aggregation, HAVING runs after.",
+        ans:`SELECT dept_id,
+       AVG(salary) AS avg_salary
+FROM employees
+GROUP BY dept_id
+HAVING AVG(salary) > 55000;`
+      },
+      {
+        q:"Find employees who have placed more than 1 completed order. Show emp_id and order count.",
+        hint:"Filter status = 'Completed' in WHERE first, then GROUP BY emp_id, then HAVING COUNT > 1.",
+        ans:`SELECT emp_id,
+       COUNT(order_id) AS completed_orders
+FROM orders
+WHERE status = 'Completed'
+GROUP BY emp_id
+HAVING COUNT(order_id) > 1;`
+      },
+      {
+        q:"Show the total, minimum, maximum, and average order amount per employee — only for employees who have at least 2 orders.",
+        hint:"Use multiple aggregate functions in one SELECT. Filter with HAVING COUNT(*) >= 2.",
+        ans:`SELECT emp_id,
+       COUNT(*)        AS total_orders,
+       SUM(amount)     AS total_amount,
+       MIN(amount)     AS min_amount,
+       MAX(amount)     AS max_amount,
+       AVG(amount)     AS avg_amount
+FROM orders
+GROUP BY emp_id
+HAVING COUNT(*) >= 2;`
+      }
+    ]
+  },
+  {
+    cat:"Subqueries/CTE",
+    qs:[
+      {
+        q:"Find employees whose salary is greater than the average salary of their own department.",
+        hint:"Use a correlated subquery in WHERE clause — the inner query references the outer query's dept_id. This is a very frequently asked pattern.",
+        ans:`SELECT e1.name, e1.dept_id, e1.salary
+FROM employees e1
+WHERE e1.salary > (
+  SELECT AVG(e2.salary)
+  FROM employees e2
+  WHERE e2.dept_id = e1.dept_id
+);`
+      },
+      {
+        q:"Using a CTE, find the department with the highest total salary expenditure.",
+        hint:"Write a CTE that calculates SUM(salary) per dept_id. Then in the outer query, pick the MAX or use ORDER BY + LIMIT 1.",
+        ans:`WITH dept_salary AS (
+  SELECT dept_id,
+         SUM(salary) AS total_salary
+  FROM employees
+  GROUP BY dept_id
+)
+SELECT dept_id, total_salary
+FROM dept_salary
+WHERE total_salary = (
+  SELECT MAX(total_salary) FROM dept_salary
+);`
+      },
+      {
+        q:"Write a recursive CTE to show the full management chain for employee Priya (emp_id=2) — from Priya up to the top-level manager.",
+        hint:"Recursive CTE: anchor = start from emp_id=2, recursive part = join manager_id to emp_id. Stop when manager_id IS NULL.",
+        ans:`WITH RECURSIVE mgr_chain AS (
+  SELECT emp_id, name, manager_id, 1 AS level
+  FROM employees
+  WHERE emp_id = 2
+  UNION ALL
+  SELECT e.emp_id, e.name, e.manager_id, mc.level + 1
+  FROM employees e
+  JOIN mgr_chain mc ON e.emp_id = mc.manager_id
+)
+SELECT emp_id, name, manager_id, level
+FROM mgr_chain;`
+      }
+    ]
+  },
+  {
+    cat:"String/Date",
+    qs:[
+      {
+        q:"From the employees table, extract the year and month from join_date and show how many employees joined each month-year combination.",
+        hint:"Use YEAR() and MONTH() functions (or DATE_FORMAT in MySQL / TO_CHAR in Postgres). GROUP BY both.",
+        ans:`SELECT YEAR(join_date)  AS join_year,
+       MONTH(join_date) AS join_month,
+       COUNT(*)         AS employees_joined
+FROM employees
+GROUP BY YEAR(join_date), MONTH(join_date)
+ORDER BY join_year, join_month;`
+      },
+      {
+        q:"Find all employees who joined in the last 3 years. Use a dynamic date condition — do not hardcode a year.",
+        hint:"Use CURRENT_DATE or GETDATE() depending on your DB. Subtract interval or use DATEADD. This tests whether you know dynamic date filtering.",
+        ans:`-- Standard SQL / MySQL
+SELECT name, join_date
+FROM employees
+WHERE join_date >= DATE_SUB(CURRENT_DATE, INTERVAL 3 YEAR);
+
+-- SQL Server
+SELECT name, join_date
+FROM employees
+WHERE join_date >= DATEADD(YEAR, -3, GETDATE());`
+      },
+      {
+        q:"Show each employee's full name in uppercase and the number of characters in their name.",
+        hint:"UPPER() for uppercase, LEN() or LENGTH() for character count depending on the database.",
+        ans:`SELECT name,
+       UPPER(name)   AS name_upper,
+       LEN(name)     AS name_length  -- SQL Server
+       -- LENGTH(name) for MySQL/Postgres
+FROM employees;`
+      }
+    ]
+  },
+  {
+    cat:"Advanced",
+    qs:[
+      {
+        q:"Delete all duplicate rows from the orders table keeping only the row with the lowest order_id for each emp_id + amount combination.",
+        hint:"Use a CTE with ROW_NUMBER() partitioned by emp_id and amount. Then DELETE WHERE row_number > 1.",
+        ans:`WITH dupes AS (
+  SELECT order_id,
+         ROW_NUMBER() OVER (
+           PARTITION BY emp_id, amount
+           ORDER BY order_id
+         ) AS rn
+  FROM orders
+)
+DELETE FROM orders
+WHERE order_id IN (
+  SELECT order_id FROM dupes WHERE rn > 1
+);`
+      },
+      {
+        q:"Pivot the orders table: show each emp_id as a row and order status (Completed, Pending, Cancelled) as columns with the count of each.",
+        hint:"Use conditional aggregation with SUM(CASE WHEN status='X' THEN 1 ELSE 0 END) — works in all databases unlike PIVOT which is SQL Server specific.",
+        ans:`SELECT emp_id,
+  SUM(CASE WHEN status='Completed'  THEN 1 ELSE 0 END) AS completed,
+  SUM(CASE WHEN status='Pending'    THEN 1 ELSE 0 END) AS pending,
+  SUM(CASE WHEN status='Cancelled'  THEN 1 ELSE 0 END) AS cancelled
+FROM orders
+GROUP BY emp_id;`
+      },
+      {
+        q:"Find the second highest salary in the employees table. Your query must work even if there are duplicate salaries at the top.",
+        hint:"Use DENSE_RANK() in a CTE or subquery, filter WHERE rnk = 2. Avoid MAX(salary) WHERE salary != MAX approach — it breaks with duplicates.",
+        ans:`WITH salary_ranked AS (
+  SELECT salary,
+         DENSE_RANK() OVER (ORDER BY salary DESC) AS rnk
+  FROM employees
+)
+SELECT DISTINCT salary AS second_highest
+FROM salary_ranked
+WHERE rnk = 2;`
+      },
+      {
+        q:"Write a query to calculate the month-over-month percentage change in total order amounts.",
+        hint:"Use LAG() on the monthly total inside a CTE. Then calculate ((current - prev) / prev) * 100 in the outer query.",
+        ans:`WITH monthly AS (
+  SELECT YEAR(order_date)  AS yr,
+         MONTH(order_date) AS mo,
+         SUM(amount)       AS total
+  FROM orders
+  GROUP BY YEAR(order_date), MONTH(order_date)
+),
+with_prev AS (
+  SELECT yr, mo, total,
+         LAG(total) OVER (ORDER BY yr, mo) AS prev_total
+  FROM monthly
+)
+SELECT yr, mo, total, prev_total,
+  ROUND((total - prev_total) * 100.0 / prev_total, 2) AS mom_pct_change
+FROM with_prev;`
+      }
+    ]
+  }
+];
+
+function toggleDDL(){
+  const el=document.getElementById("ddl-block");
+  el.style.display=el.style.display==="block"?"none":"block";
+}
+let shown={};
+function toggleEl(id){
+  const el=document.getElementById(id);
+  el.style.display=el.style.display==="block"?"none":"block";
+}
+function revealAns(id){
+  toggleEl("a"+id);
+  if(!shown[id]){shown[id]=true;updateProg();}
+}
+function updateProg(){
+  const total=cats.reduce((s,c)=>s+c.qs.length,0);
+  document.getElementById("prog").style.width=Math.round(Object.keys(shown).length/total*100)+"%";
+}
+function showCat(idx){
+  document.querySelectorAll(".tab").forEach((t,i)=>t.classList.toggle("active",i===idx));
+  const cat=cats[idx];
+  let html="";
+  cat.qs.forEach((q,qi)=>{
+    const id=`${idx}_${qi}`;
+    html+=`<div class="q-card">
+      <div class="q-num">Q${qi+1} <span class="cat-tag">${cat.cat}</span></div>
+      <div class="q-text">${q.q}</div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap">
+        <button class="hint-btn" onclick="toggleEl('h${id}')">Hint</button>
+        <button class="ans-btn" onclick="revealAns('${id}')">Show Answer</button>
+        <button class="dive-btn" onclick="sendPrompt('SQL: explain in detail with alternatives - ${q.q.replace(/'/g,"").replace(/\n/g," ")}')">Deep Dive ↗</button>
+      </div>
+      <div class="hint-text" id="h${id}">${q.hint}</div>
+      <div class="ans-block" id="a${id}">${q.ans}</div>
+    </div>`;
+  });
+  document.getElementById("q-container").innerHTML=html;
+}
+showCat(0);
+</script>

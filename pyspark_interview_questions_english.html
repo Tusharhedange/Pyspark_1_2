@@ -1,0 +1,258 @@
+
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:var(--font-sans)}
+.container{padding:1rem 0}
+.header{display:flex;align-items:center;gap:12px;margin-bottom:1.5rem;flex-wrap:wrap}
+.badge{font-size:11px;padding:3px 10px;border-radius:20px;font-weight:500;background:var(--color-background-info);color:var(--color-text-info)}
+.tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:1.25rem}
+.tab{font-size:13px;padding:6px 14px;border-radius:20px;border:0.5px solid var(--color-border-secondary);background:transparent;cursor:pointer;color:var(--color-text-secondary);transition:all .15s}
+.tab.active{background:var(--color-text-primary);color:var(--color-background-primary);border-color:var(--color-text-primary)}
+.df-section{background:var(--color-background-secondary);border-radius:var(--border-radius-lg);padding:1rem 1.25rem;margin-bottom:1rem;border:0.5px solid var(--color-border-tertiary)}
+.df-title{font-size:12px;color:var(--color-text-secondary);margin-bottom:8px;font-weight:500;letter-spacing:.03em}
+.df-table{width:100%;border-collapse:collapse;font-size:12px;font-family:var(--font-mono)}
+.df-table th{text-align:left;padding:4px 10px;background:var(--color-background-primary);border-bottom:0.5px solid var(--color-border-secondary);color:var(--color-text-secondary);font-weight:500}
+.df-table td{padding:4px 10px;border-bottom:0.5px solid var(--color-border-tertiary);color:var(--color-text-primary)}
+.df-table tr:last-child td{border-bottom:none}
+.q-card{background:var(--color-background-primary);border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-lg);padding:1rem 1.25rem;margin-bottom:10px}
+.q-num{font-size:11px;color:var(--color-text-secondary);margin-bottom:6px;font-weight:500}
+.q-text{font-size:14px;color:var(--color-text-primary);margin-bottom:10px;line-height:1.6}
+.code-block{background:var(--color-background-secondary);border-radius:var(--border-radius-md);padding:10px 12px;font-family:var(--font-mono);font-size:12px;color:var(--color-text-primary);white-space:pre;overflow-x:auto;margin-bottom:10px;border:0.5px solid var(--color-border-tertiary)}
+.hint-btn{font-size:12px;padding:5px 12px;border-radius:20px;border:0.5px solid var(--color-border-secondary);background:transparent;cursor:pointer;color:var(--color-text-secondary)}
+.hint-btn:hover{background:var(--color-background-secondary)}
+.hint-text{font-size:12px;color:var(--color-text-secondary);margin-top:8px;padding:8px 12px;background:var(--color-background-secondary);border-radius:var(--border-radius-md);border-left:2px solid var(--color-border-info);display:none;line-height:1.6}
+.ans-btn{font-size:12px;padding:5px 12px;border-radius:20px;border:0.5px solid var(--color-border-secondary);background:transparent;cursor:pointer;color:var(--color-text-info);margin-left:6px}
+.ans-btn:hover{background:var(--color-background-info)}
+.ans-block{font-family:var(--font-mono);font-size:12px;background:var(--color-background-secondary);border-radius:var(--border-radius-md);padding:10px 12px;margin-top:8px;display:none;border:0.5px solid var(--color-border-tertiary);white-space:pre;overflow-x:auto;color:var(--color-text-primary)}
+.progress-bar{height:4px;background:var(--color-border-tertiary);border-radius:2px;margin-bottom:1.25rem;overflow:hidden}
+.progress-fill{height:100%;background:var(--color-text-info);border-radius:2px;transition:width .3s}
+.category-tag{font-size:11px;padding:2px 8px;border-radius:4px;background:var(--color-background-warning);color:var(--color-text-warning);font-weight:500;margin-left:8px}
+</style>
+<div class="container">
+<h2 class="sr-only">PySpark Interview Questions with DataFrames — Practice Tool</h2>
+<div class="header">
+  <span style="font-size:16px;font-weight:500;color:var(--color-text-primary)">PySpark Interview Prep</span>
+  <span class="badge">Azure Data Engineer</span>
+</div>
+
+<div class="df-section">
+  <div class="df-title">SAMPLE DATAFRAMES (these are the typical datasets given in interviews)</div>
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px">
+    <div>
+      <div style="font-size:11px;font-weight:500;color:var(--color-text-secondary);margin-bottom:6px">df_emp (employees)</div>
+      <table class="df-table">
+        <tr><th>emp_id</th><th>name</th><th>dept</th><th>salary</th></tr>
+        <tr><td>1</td><td>Rohit</td><td>IT</td><td>60000</td></tr>
+        <tr><td>2</td><td>Priya</td><td>HR</td><td>45000</td></tr>
+        <tr><td>3</td><td>Amit</td><td>IT</td><td>70000</td></tr>
+        <tr><td>4</td><td>Neha</td><td>IT</td><td>60000</td></tr>
+        <tr><td>5</td><td>Karan</td><td>HR</td><td>55000</td></tr>
+        <tr><td>6</td><td>null</td><td>null</td><td>null</td></tr>
+      </table>
+    </div>
+    <div>
+      <div style="font-size:11px;font-weight:500;color:var(--color-text-secondary);margin-bottom:6px">df_sales (orders)</div>
+      <table class="df-table">
+        <tr><th>order_id</th><th>emp_id</th><th>amount</th><th>date</th></tr>
+        <tr><td>101</td><td>1</td><td>5000</td><td>2024-01-05</td></tr>
+        <tr><td>102</td><td>2</td><td>3000</td><td>2024-01-10</td></tr>
+        <tr><td>103</td><td>1</td><td>7000</td><td>2024-02-01</td></tr>
+        <tr><td>104</td><td>3</td><td>2000</td><td>2024-02-15</td></tr>
+        <tr><td>105</td><td>1</td><td>9000</td><td>2024-03-01</td></tr>
+        <tr><td>106</td><td>99</td><td>1000</td><td>2024-03-05</td></tr>
+      </table>
+    </div>
+    <div>
+      <div style="font-size:11px;font-weight:500;color:var(--color-text-secondary);margin-bottom:6px">df_products</div>
+      <table class="df-table">
+        <tr><th>prod_id</th><th>name</th><th>category</th><th>price</th></tr>
+        <tr><td>P1</td><td>Laptop</td><td>Electronics</td><td>50000</td></tr>
+        <tr><td>P1</td><td>Laptop</td><td>Electronics</td><td>50000</td></tr>
+        <tr><td>P2</td><td>Mouse</td><td>Electronics</td><td>800</td></tr>
+        <tr><td>P3</td><td>Desk</td><td>Furniture</td><td>12000</td></tr>
+        <tr><td>P3</td><td>Desk</td><td>Furniture</td><td>12000</td></tr>
+      </table>
+    </div>
+  </div>
+</div>
+
+<div class="tabs" id="tabs">
+  <button class="tab active" onclick="showCat(0)">Basics</button>
+  <button class="tab" onclick="showCat(1)">Joins</button>
+  <button class="tab" onclick="showCat(2)">Window Fn</button>
+  <button class="tab" onclick="showCat(3)">GroupBy/Agg</button>
+  <button class="tab" onclick="showCat(4)">Null/Dedup</button>
+  <button class="tab" onclick="showCat(5)">Performance</button>
+</div>
+
+<div class="progress-bar"><div class="progress-fill" id="prog" style="width:0%"></div></div>
+
+<div id="q-container"></div>
+</div>
+
+<script>
+const data = [
+  {
+    cat:"Basics",
+    qs:[
+      {
+        q:"From df_emp, fetch only IT department employees whose salary is greater than 60000.",
+        hint:"Use filter() or where(). For multiple conditions use the & operator.",
+        ans:`df_emp.filter((df_emp.dept == "IT") & (df_emp.salary > 60000)).show()`
+      },
+      {
+        q:"In df_emp, rename the 'salary' column to 'annual_ctc' and select only name and annual_ctc.",
+        hint:"Use withColumnRenamed() or alias() inside select().",
+        ans:`df_emp.withColumnRenamed("salary","annual_ctc")\n       .select("name","annual_ctc").show()`
+      },
+      {
+        q:"Add a new column 'salary_grade' to df_emp: if salary >= 60000 then 'A', else 'B'.",
+        hint:"Use withColumn() + when().otherwise() — import from pyspark.sql.functions.",
+        ans:`from pyspark.sql.functions import when, col\ndf_emp.withColumn("salary_grade",\n  when(col("salary")>=60000,"A").otherwise("B")).show()`
+      },
+      {
+        q:"Print the schema of df_sales and also get the total row count.",
+        hint:"printSchema() and count() — both are very frequently asked in interviews.",
+        ans:`df_sales.printSchema()\nprint(df_sales.count())`
+      }
+    ]
+  },
+  {
+    cat:"Joins",
+    qs:[
+      {
+        q:"Join df_emp and df_sales on emp_id and show total sales generated by each employee. The order from emp_id=99 (not in df_emp) should also appear.",
+        hint:"When you also want records that exist only in the right table, use right join or full outer. Here emp_id=99 exists only in sales.",
+        ans:`from pyspark.sql.functions import sum\ndf_sales.join(df_emp, on="emp_id", how="left")\n        .groupBy("emp_id","name")\n        .agg(sum("amount").alias("total_sales")).show()`
+      },
+      {
+        q:"From df_emp, find employees who have made no sales at all in df_sales.",
+        hint:"Use left anti join — this is a very common interview pattern.",
+        ans:`df_emp.join(df_sales, on="emp_id", how="left_anti")\n      .select("emp_id","name").show()`
+      },
+      {
+        q:"Self join df_emp to show pairs of employees from the same department (exclude pairing a person with themselves).",
+        hint:"First alias() the DataFrame twice, then join with dept match and emp_id != condition.",
+        ans:`from pyspark.sql.functions import col\ne1 = df_emp.alias("e1")\ne2 = df_emp.alias("e2")\ne1.join(e2,\n  (col("e1.dept")==col("e2.dept")) &\n  (col("e1.emp_id") < col("e2.emp_id")))\n  .select("e1.name","e2.name","e1.dept").show()`
+      }
+    ]
+  },
+  {
+    cat:"Window Fn",
+    qs:[
+      {
+        q:"Rank employees within each department by salary. Ties should get the same rank.",
+        hint:"Create Window.partitionBy('dept').orderBy('salary'), then apply rank() function.",
+        ans:`from pyspark.sql.window import Window\nfrom pyspark.sql.functions import rank\nw = Window.partitionBy("dept").orderBy(col("salary").desc())\ndf_emp.withColumn("rank", rank().over(w)).show()`
+      },
+      {
+        q:"In df_sales, calculate a running total (cumulative sum of amount) per employee ordered by date.",
+        hint:"Use rowsBetween(Window.unboundedPreceding, Window.currentRow) inside the Window spec.",
+        ans:`from pyspark.sql.window import Window\nfrom pyspark.sql.functions import sum\nw = Window.partitionBy("emp_id")\n          .orderBy("date")\n          .rowsBetween(Window.unboundedPreceding, 0)\ndf_sales.withColumn("running_total", sum("amount").over(w)).show()`
+      },
+      {
+        q:"In df_sales, show the previous order's amount for each row (partitioned by emp_id, ordered by date).",
+        hint:"Use the lag() function — lead/lag window function questions are extremely common.",
+        ans:`from pyspark.sql.functions import lag\nfrom pyspark.sql.window import Window\nw = Window.partitionBy("emp_id").orderBy("date")\ndf_sales.withColumn("prev_amount",\n  lag("amount",1).over(w)).show()`
+      }
+    ]
+  },
+  {
+    cat:"GroupBy/Agg",
+    qs:[
+      {
+        q:"From df_emp, get dept-wise: total employees, average salary, max salary, min salary — all in a single query.",
+        hint:"Pass multiple aggregation functions inside groupBy().agg() at once.",
+        ans:`from pyspark.sql.functions import count, avg, max, min\ndf_emp.groupBy("dept").agg(\n  count("emp_id").alias("total_emp"),\n  avg("salary").alias("avg_sal"),\n  max("salary").alias("max_sal"),\n  min("salary").alias("min_sal")\n).show()`
+      },
+      {
+        q:"From df_emp, show only those departments where the average salary is greater than 50000.",
+        hint:"Apply .filter() after groupBy().agg() — this is the PySpark equivalent of SQL's HAVING clause.",
+        ans:`from pyspark.sql.functions import avg, col\ndf_emp.groupBy("dept")\n      .agg(avg("salary").alias("avg_sal"))\n      .filter(col("avg_sal") > 50000)\n      .show()`
+      },
+      {
+        q:"In df_sales, calculate month-wise total sales (the date column is in string format).",
+        hint:"Convert date with to_date(), then extract month() before groupBy.",
+        ans:`from pyspark.sql.functions import to_date, month, sum\ndf_sales.withColumn("month", month(to_date("date","yyyy-MM-dd")))\n        .groupBy("month").agg(sum("amount").alias("total")).show()`
+      }
+    ]
+  },
+  {
+    cat:"Null/Dedup",
+    qs:[
+      {
+        q:"In df_emp, first drop all rows that have any null value. Then separately fill null salaries with 0.",
+        hint:"dropna() and fillna() handle two different scenarios — know when to use which.",
+        ans:`# Drop rows where any column is null\ndf_emp.dropna().show()\n\n# Fill only salary nulls with 0\ndf_emp.fillna({"salary": 0}).show()`
+      },
+      {
+        q:"df_products has duplicate rows based on prod_id. Remove duplicates and verify the count before and after.",
+        hint:"Use dropDuplicates() with specific column names to deduplicate on a subset.",
+        ans:`df_clean = df_products.dropDuplicates(["prod_id"])\nprint(f"Before: {df_products.count()}, After: {df_clean.count()}")\ndf_clean.show()`
+      },
+      {
+        q:"Build a summary DataFrame showing how many null values exist in each column of df_emp.",
+        hint:"Use agg() with sum(col.isNull().cast('int')) for each column — a very common data quality check pattern.",
+        ans:`from pyspark.sql.functions import sum, col\nnull_counts = df_emp.agg(\n  *[sum(col(c).isNull().cast("int"))\n    .alias(c) for c in df_emp.columns]\n)\nnull_counts.show()`
+      }
+    ]
+  },
+  {
+    cat:"Performance",
+    qs:[
+      {
+        q:"You are joining df_emp (small) with df_sales (large). How do you optimize this join?",
+        hint:"Use broadcast join for the small DataFrame — this avoids a full shuffle completely.",
+        ans:`from pyspark.sql.functions import broadcast\ndf_result = df_sales.join(\n  broadcast(df_emp), on="emp_id", how="inner"\n)\ndf_result.show()`
+      },
+      {
+        q:"A large DataFrame is being used multiple times in your pipeline. How do you optimize it?",
+        hint:"Use persist() or cache(). Key difference: cache = memory only; persist = you choose storage level.",
+        ans:`from pyspark import StorageLevel\n\n# Cache (memory only)\ndf_emp.cache()\n\n# Persist (memory + disk)\ndf_emp.persist(StorageLevel.MEMORY_AND_DISK)\n\n# Trigger with an action\ndf_emp.count()\n\n# Release when done\ndf_emp.unpersist()`
+      },
+      {
+        q:"df_sales has 200 partitions but the data is only from 5 departments. How do you reduce the partition count?",
+        hint:"coalesce() vs repartition() — coalesce does not shuffle, it just merges. Prefer it when reducing partitions.",
+        ans:`# Reduce partitions (no shuffle)\ndf_optimized = df_sales.coalesce(5)\nprint(df_optimized.rdd.getNumPartitions())\n\n# Redistribute on a column (with shuffle)\ndf_repartitioned = df_sales.repartition(10, "emp_id")\nprint(df_repartitioned.rdd.getNumPartitions())`
+      }
+    ]
+  }
+];
+
+let shown = {};
+function toggleHint(id){
+  const el=document.getElementById("h"+id);
+  el.style.display=el.style.display==="block"?"none":"block";
+}
+function toggleAns(id){
+  const el=document.getElementById("a"+id);
+  el.style.display=el.style.display==="block"?"none":"block";
+  if(!shown[id]){shown[id]=true;updateProg();}
+}
+function updateProg(){
+  const total=data.reduce((s,c)=>s+c.qs.length,0);
+  const done=Object.keys(shown).length;
+  document.getElementById("prog").style.width=Math.round(done/total*100)+"%";
+}
+function showCat(idx){
+  document.querySelectorAll(".tab").forEach((t,i)=>t.classList.toggle("active",i===idx));
+  const cat=data[idx];
+  let html="";
+  cat.qs.forEach((q,qi)=>{
+    const id=`${idx}_${qi}`;
+    html+=`<div class="q-card">
+      <div class="q-num">Q${qi+1} <span class="category-tag">${cat.cat}</span></div>
+      <div class="q-text">${q.q}</div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap">
+        <button class="hint-btn" onclick="toggleHint('${id}')">💡 Hint</button>
+        <button class="ans-btn" onclick="toggleAns('${id}')">Show Answer</button>
+        <button class="ans-btn" onclick="sendPrompt('Explain in detail: ${q.q.replace(/'/g,"")}')" style="color:var(--color-text-secondary)">Deep Dive ↗</button>
+      </div>
+      <div class="hint-text" id="h${id}">${q.hint}</div>
+      <div class="ans-block" id="a${id}">${q.ans}</div>
+    </div>`;
+  });
+  document.getElementById("q-container").innerHTML=html;
+}
+showCat(0);
+</script>
